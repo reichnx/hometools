@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Home Tools</title>
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2857/2857460.png">
+    <title>Home Tools - Remove BG, FB Share, Downloader, Cover Maker, SMS Bomber, ID Templates</title>
+    <link rel="icon" type="image/png" href="https://img.icons8.com/fluency/48/tools.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
@@ -275,14 +275,15 @@
             padding: 16px;
             display: flex;
             align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
             justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
             margin-bottom: 12px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
         .id-card:hover { transform: translateX(5px); background: rgba(102,126,234,0.1); }
+        .id-buttons { display: flex; gap: 10px; }
         .loading { text-align: center; padding: 40px; }
         .loading i { font-size: 2rem; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -376,6 +377,8 @@
             .main-content { margin-left: 0; max-width: 100%; padding: 20px; }
             .stats-grid { grid-template-columns: 1fr; }
             .live-progress { left: 20px; right: 20px; min-width: auto; }
+            .id-card { flex-direction: column; text-align: center; }
+            .id-buttons { justify-content: center; }
         }
     </style>
 </head>
@@ -806,7 +809,7 @@
 
         function getSMSBomberHTML() {
             return `<div class="card"><h2><i class="fas fa-bomb"></i> SMS Bomber</h2><p>Send bulk SMS messages to any phone number (max 50 messages)</p></div>
-            <div class="input-section"><div class="input-group" style="flex-direction:column; gap:12px;"><input type="tel" id="smsPhone" placeholder="Phone number (e.g., 09979939317 or +639979939317)"><input type="number" id="smsAmount" placeholder="Number of SMS (max 50)" min="1" max="50" value="10"><button id="smsBombBtn"><i class="fas fa-bomb"></i> Start SMS Bomber</button></div></div>
+            <div class="input-section"><div class="input-group" style="flex-direction:column; gap:12px;"><input type="tel" id="smsPhone" placeholder="Enter phone number (e.g., 09123456789)"><input type="number" id="smsAmount" placeholder="Number of SMS (max 50)" min="1" max="50" value="10"><button id="smsBombBtn"><i class="fas fa-bomb"></i> Start SMS Bomber</button></div></div>
             <div class="result-section" id="smsResult"><div class="result-header"><i class="fas fa-info-circle"></i><h3>Result</h3></div><div style="text-align:center;padding:30px;">Enter a phone number and click Start.</div></div>`;
         }
 
@@ -818,7 +821,7 @@
                 if (amount < 1 || amount > 50) { alert('Amount must be between 1 and 50'); return; }
                 const btn = document.getElementById('smsBombBtn');
                 btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Starting...';
-                document.getElementById('smsResult').innerHTML = `<div class="loading"><i class="fas fa-spinner fa-pulse"></i><p>Starting SMS bombing for ${phone}...</p></div>`;
+                document.getElementById('smsResult').innerHTML = `<div class="loading"><i class="fas fa-spinner fa-pulse"></i><p>Starting SMS bombing...</p></div>`;
                 try {
                     const res = await fetch('/api/smsbomb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount }) });
                     const data = await res.json();
@@ -843,11 +846,21 @@
                     const templates = data.templates;
                     let html = '';
                     for (const [key, template] of Object.entries(templates)) {
-                        html += `<div class="id-card"><div><i class="fas fa-id-card"></i> <strong>${template.name}</strong></div><div style="display:flex; gap:10px;"><a href="${template.front}" class="download-btn" download target="_blank" style="background:#3498db;"><i class="fas fa-image"></i> Front</a><a href="${template.back}" class="download-btn" download target="_blank" style="background:#2980b9;"><i class="fas fa-image"></i> Back</a></div></div>`;
+                        html += `<div class="id-card">
+                            <div><i class="fas fa-id-card"></i> <strong>${template.name}</strong></div>
+                            <div class="id-buttons">
+                                <a href="${template.front}" class="download-btn" download target="_blank" style="background:#3498db;"><i class="fas fa-image"></i> Front</a>
+                                <a href="${template.back}" class="download-btn" download target="_blank" style="background:#2980b9;"><i class="fas fa-image"></i> Back</a>
+                            </div>
+                        </div>`;
                     }
                     document.getElementById('idList').innerHTML = html;
+                    updateToolPerformance('idtemplates', 1, 0);
                 }
-            } catch(e) { console.error(e); }
+            } catch(e) { 
+                console.error(e);
+                updateToolPerformance('idtemplates', 0, 1);
+            }
         }
 
         loadDashboard();
