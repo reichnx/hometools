@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Home Tools</title>
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
+    <link rel="icon" type="image/png" href=": {
+    "url"https://iili.io/CdFq8E7.jpg">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
@@ -313,12 +314,6 @@
         .drop-zone i { font-size: 48px; margin-bottom: 15px; color: #667eea; }
         .drop-zone p { margin: 10px 0; }
         .drop-zone .small { font-size: 0.8rem; opacity: 0.7; }
-        .image-preview {
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 16px;
-            margin-top: 15px;
-        }
         /* Live Share Progress */
         .live-progress {
             position: fixed;
@@ -368,6 +363,10 @@
             right: 20px;
             font-size: 24px;
             cursor: pointer;
+        }
+        .spotify-card {
+            background: rgba(29, 185, 84, 0.1);
+            border-left: 4px solid #1DB954;
         }
         @media (max-width: 768px) {
             .hamburger { display: flex; }
@@ -539,6 +538,16 @@
                 mainContent.innerHTML = getFBCoverHTML();
                 attachFBCoverEvents();
             }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
         }
 
         // Update tool performance (called after each tool action)
@@ -870,7 +879,7 @@
             } catch(e) { console.error(e); }
         }
 
-        // Media Downloader with performance tracking
+        // Media Downloader with performance tracking and UPDATED Spotify handler
         function getMediaDownloaderHTML() {
             return `<div class="card"><h2><i class="fas fa-download"></i> Media Downloader</h2><p>Download videos & audio from TikTok, Instagram, YouTube, Spotify, Facebook, SoundCloud</p></div>
             <div class="platforms" id="downloadPlatforms"></div>
@@ -879,58 +888,149 @@
         }
 
         function attachMediaDownloaderEvents() {
-            const platforms = ['tiktok','instagram','youtube','spotify','facebook','soundcloud'];
+            const platforms = ['tiktok', 'instagram', 'youtube', 'spotify', 'facebook', 'soundcloud'];
             let selectedPlatform = 'tiktok';
             const platformDiv = document.getElementById('downloadPlatforms');
-            platformDiv.innerHTML = platforms.map(p => `<div class="platform-card ${p==='tiktok'?'active':''}" data-platform="${p}"><i class="fab fa-${p}"></i><span>${p.charAt(0).toUpperCase()+p.slice(1)}</span></div>`).join('');
+            platformDiv.innerHTML = platforms.map(p => `<div class="platform-card ${p === 'tiktok' ? 'active' : ''}" data-platform="${p}"><i class="fab fa-${p}"></i><span>${p.charAt(0).toUpperCase() + p.slice(1)}</span></div>`).join('');
+            
             document.querySelectorAll('#downloadPlatforms .platform-card').forEach(card => {
                 card.onclick = () => {
                     document.querySelectorAll('#downloadPlatforms .platform-card').forEach(c => c.classList.remove('active'));
                     card.classList.add('active');
                     selectedPlatform = card.dataset.platform;
+                    // Update placeholder based on platform
+                    const urlInput = document.getElementById('mediaUrl');
+                    const placeholders = {
+                        tiktok: 'https://www.tiktok.com/@username/video/123456789...',
+                        instagram: 'https://www.instagram.com/p/CxYZ...',
+                        youtube: 'https://www.youtube.com/watch?v=...',
+                        spotify: 'https://open.spotify.com/track/...',
+                        facebook: 'https://www.facebook.com/watch?v=...',
+                        soundcloud: 'https://soundcloud.com/user/track...'
+                    };
+                    urlInput.placeholder = placeholders[selectedPlatform] || 'Paste media URL...';
                 };
             });
+            
             document.getElementById('downloadMediaBtn').onclick = async () => {
                 const url = document.getElementById('mediaUrl').value.trim();
                 if (!url) { alert('Please enter a URL'); return; }
                 const btn = document.getElementById('downloadMediaBtn');
-                btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Fetching...';
-                document.getElementById('downloadResult').innerHTML = `<div class="loading"><i class="fas fa-spinner fa-pulse"></i><p>Fetching media...</p></div>`;
+                btn.disabled = true; 
+                btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Fetching...';
+                document.getElementById('downloadResult').innerHTML = `<div class="loading"><i class="fas fa-spinner fa-pulse"></i><p>Fetching media from ${selectedPlatform.toUpperCase()}...</p></div>`;
+                
                 try {
-                    const res = await fetch('/api/download-media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platform: selectedPlatform, url }) });
+                    const res = await fetch('/api/download-media', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ platform: selectedPlatform, url }) 
+                    });
                     const data = await res.json();
-                    if (data.success) { 
+                    
+                    if (data.success) {
                         updateToolPerformance('mediadownloader', 1, 0);
-                        displayDownloadResult(data.data, selectedPlatform); 
-                    } else { 
+                        displayDownloadResult(data, selectedPlatform);
+                    } else {
                         updateToolPerformance('mediadownloader', 0, 1);
-                        throw new Error(data.error); 
+                        throw new Error(data.error);
                     }
                 } catch(e) { 
                     updateToolPerformance('mediadownloader', 0, 1);
                     document.getElementById('downloadResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`; 
                 }
-                finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> Fetch Media'; }
+                finally { 
+                    btn.disabled = false; 
+                    btn.innerHTML = '<i class="fas fa-download"></i> Fetch Media'; 
+                }
             };
         }
 
-        function displayDownloadResult(data, platform) {
+        // UPDATED: Complete displayDownloadResult function with proper Spotify handling
+        function displayDownloadResult(response, platform) {
+            const data = response.data;
+            
             let html = `<div class="result-header"><i class="fab fa-${platform}"></i><h3>${platform.toUpperCase()} Results</h3></div><div class="result-content">`;
+            
             if (platform === 'tiktok' && data.data) {
-                if (data.data.video) html += `<div class="media-card"><div><i class="fas fa-video"></i> Video</div><a href="${data.data.video}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a></div>`;
-                if (data.data.audio) html += `<div class="media-card"><div><i class="fas fa-music"></i> Audio</div><a href="${data.data.audio}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a></div>`;
-            } else if ((platform === 'instagram' || platform === 'facebook') && data.data?.videoUrl) {
-                html += `<div class="media-card"><div><i class="fab fa-${platform}"></i> Video</div><a href="${data.data.videoUrl}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a></div>`;
-            } else if (platform === 'youtube' && data.mp3) {
-                if (data.title) html += `<div style="margin-bottom:10px;"><strong>${data.title}</strong></div>`;
-                html += `<div class="media-card"><div><i class="fas fa-music"></i> MP3 Audio</div><a href="${data.mp3}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> MP3</a></div>`;
-                if (data.mp4) html += `<div class="media-card"><div><i class="fas fa-video"></i> MP4 Video</div><a href="${data.mp4}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> MP4</a></div>`;
-            } else if (platform === 'spotify' && data.data?.download) {
-                html += `<div class="media-card"><div><i class="fas fa-music"></i> ${data.data.title || 'Track'}</div><a href="${data.data.download}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a></div>`;
-            } else if (platform === 'soundcloud' && data.url) {
-                html += `<div class="media-card"><div><i class="fas fa-music"></i> ${data.title || 'Audio'}</div><a href="${data.url}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a></div>`;
-            } else { html += '<div style="text-align:center;padding:20px;">No downloadable media found.</div>'; }
-            document.getElementById('downloadResult').innerHTML = html + '</div>';
+                if (data.data.video) {
+                    html += `<div class="media-card">
+                        <div><i class="fas fa-video"></i> Video</div>
+                        <a href="${data.data.video}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download Video</a>
+                    </div>`;
+                }
+                if (data.data.audio) {
+                    html += `<div class="media-card">
+                        <div><i class="fas fa-music"></i> Audio</div>
+                        <a href="${data.data.audio}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download Audio</a>
+                    </div>`;
+                }
+            } 
+            else if ((platform === 'instagram' || platform === 'facebook') && data.data?.videoUrl) {
+                html += `<div class="media-card">
+                    <div><i class="fab fa-${platform}"></i> Video</div>
+                    <a href="${data.data.videoUrl}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a>
+                </div>`;
+            } 
+            else if (platform === 'youtube') {
+                if (data.title) html += `<div style="margin-bottom:15px;"><strong><i class="fab fa-youtube"></i> ${escapeHtml(data.title)}</strong></div>`;
+                if (data.mp3) {
+                    html += `<div class="media-card">
+                        <div><i class="fas fa-music"></i> MP3 Audio</div>
+                        <a href="${data.mp3}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download MP3</a>
+                    </div>`;
+                }
+                if (data.mp4) {
+                    html += `<div class="media-card">
+                        <div><i class="fas fa-video"></i> MP4 Video</div>
+                        <a href="${data.mp4}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download MP4</a>
+                    </div>`;
+                }
+            }
+            else if (platform === 'spotify') {
+                // Handle the new Spotify API response format
+                const trackData = data.data || data;
+                const title = trackData.title || trackData.name || 'Spotify Track';
+                const artist = trackData.artist || trackData.artists || '';
+                const albumImage = trackData.albumImage || '';
+                const duration = trackData.duration || '';
+                const downloadUrl = trackData.downloadUrl || trackData.download || (trackData.download?.url);
+                const expires = trackData.downloadExpires || trackData.expires;
+                const note = trackData.downloadNote || trackData.note || 'Download link expires soon - save immediately!';
+                
+                if (downloadUrl) {
+                    html += `
+                        <div class="media-card spotify-card" style="display:block;">
+                            <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+                                ${albumImage ? `<img src="${albumImage}" style="width:60px; height:60px; border-radius:8px;">` : '<div style="width:60px; height:60px; background:#1DB954; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="fab fa-spotify" style="font-size:30px; color:white;"></i></div>'}
+                                <div style="flex:1;">
+                                    <div class="media-title" style="font-weight:700; margin-bottom:5px;"><i class="fab fa-spotify" style="color:#1DB954;"></i> ${escapeHtml(title)}</div>
+                                    ${artist ? `<div class="media-meta" style="font-size:0.85rem; opacity:0.8;">Artist: ${escapeHtml(artist)}</div>` : ''}
+                                    ${duration ? `<div class="media-meta" style="font-size:0.8rem; opacity:0.7;">Duration: ${duration}</div>` : ''}
+                                    ${expires ? `<div class="media-meta" style="font-size:0.75rem; color:#e74c3c; margin-top:5px;">⚠️ Link expires: ${new Date(expires).toLocaleString()}</div>` : ''}
+                                    ${note ? `<div class="media-meta" style="font-size:0.7rem; opacity:0.6; margin-top:3px;">${escapeHtml(note)}</div>` : ''}
+                                </div>
+                                <a href="${downloadUrl}" class="download-btn" download target="_blank" style="background: linear-gradient(135deg, #1DB954, #169c45);">
+                                    <i class="fas fa-download"></i> Download MP3
+                                </a>
+                            </div>
+                        </div>`;
+                } else {
+                    html += `<div class="error" style="padding:20px;"><i class="fab fa-spotify"></i> No download link available. The track may be protected or unavailable.</div>`;
+                }
+            }
+            else if (platform === 'soundcloud' && data.url) {
+                html += `<div class="media-card">
+                    <div><i class="fab fa-soundcloud"></i> ${escapeHtml(data.title || 'Audio Track')}</div>
+                    <a href="${data.url}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a>
+                </div>`;
+            }
+            else {
+                html += '<div style="text-align:center;padding:20px;">No downloadable media found. Please check the URL and try again.</div>';
+            }
+            
+            html += '</div>';
+            document.getElementById('downloadResult').innerHTML = html;
         }
 
         // FB Cover Maker with performance tracking
