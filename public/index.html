@@ -259,6 +259,7 @@
             gap: 8px;
             text-decoration: none;
         }
+        .download-btn:hover { transform: scale(1.02); box-shadow: 0 4px 12px rgba(39,174,96,0.3); }
         .media-card {
             border-radius: 20px;
             padding: 16px;
@@ -272,18 +273,23 @@
         }
         .id-card {
             border-radius: 20px;
-            padding: 16px;
+            padding: 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 15px;
             margin-bottom: 12px;
-            cursor: pointer;
             transition: all 0.3s ease;
         }
         .id-card:hover { transform: translateX(5px); background: rgba(102,126,234,0.1); }
+        .id-info { display: flex; align-items: center; gap: 12px; }
+        .id-info i { font-size: 1.8rem; }
+        .id-info h4 { font-size: 1.1rem; font-weight: 600; }
         .id-buttons { display: flex; gap: 10px; }
+        .btn-front { background: linear-gradient(135deg, #3498db, #2980b9); }
+        .btn-back { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .btn-both { background: linear-gradient(135deg, #27ae60, #219a52); }
         .loading { text-align: center; padding: 40px; }
         .loading i { font-size: 2rem; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -379,6 +385,7 @@
             .live-progress { left: 20px; right: 20px; min-width: auto; }
             .id-card { flex-direction: column; text-align: center; }
             .id-buttons { justify-content: center; }
+            .id-info { justify-content: center; }
         }
     </style>
 </head>
@@ -846,13 +853,19 @@
                     const templates = data.templates;
                     let html = '';
                     for (const [key, template] of Object.entries(templates)) {
-                        html += `<div class="id-card">
-                            <div><i class="fas fa-id-card"></i> <strong>${template.name}</strong></div>
-                            <div class="id-buttons">
-                                <a href="${template.front}" class="download-btn" download target="_blank" style="background:#3498db;"><i class="fas fa-image"></i> Front</a>
-                                <a href="${template.back}" class="download-btn" download target="_blank" style="background:#2980b9;"><i class="fas fa-image"></i> Back</a>
+                        html += `
+                            <div class="id-card">
+                                <div class="id-info">
+                                    <i class="fas fa-id-card" style="color:#f39c12;"></i>
+                                    <h4>${template.name}</h4>
+                                </div>
+                                <div class="id-buttons">
+                                    <a href="${template.front}" class="download-btn btn-front" download="${template.name.toLowerCase().replace(' ', '_')}_front.png" target="_blank"><i class="fas fa-image"></i> Front Only</a>
+                                    <a href="${template.back}" class="download-btn btn-back" download="${template.name.toLowerCase().replace(' ', '_')}_back.png" target="_blank"><i class="fas fa-image"></i> Back Only</a>
+                                    <button class="download-btn btn-both" onclick="downloadBoth('${template.front}', '${template.back}', '${template.name}')"><i class="fas fa-layer-group"></i> Both (ZIP)</button>
+                                </div>
                             </div>
-                        </div>`;
+                        `;
                     }
                     document.getElementById('idList').innerHTML = html;
                     updateToolPerformance('idtemplates', 1, 0);
@@ -863,7 +876,78 @@
             }
         }
 
+        // Function to download both front and back images (creates a ZIP file)
+        window.downloadBoth = async function(frontUrl, backUrl, idName) {
+            try {
+                // Show loading indicator
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Creating ZIP...';
+                btn.disabled = true;
+                
+                // Fetch both images
+                const [frontBlob, backBlob] = await Promise.all([
+                    fetch(frontUrl).then(res => res.blob()),
+                    fetch(backUrl).then(res => res.blob())
+                ]);
+                
+                // Create a ZIP file using JSZip
+                // Note: You need to include JSZip library. Add this to head: <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+                if (typeof JSZip === 'undefined') {
+                    // Fallback: download separately if JSZip not available
+                    const a = document.createElement('a');
+                    a.href = frontUrl;
+                    a.download = `${idName.toLowerCase().replace(/ /g, '_')}_front.png`;
+                    a.click();
+                    setTimeout(() => {
+                        const b = document.createElement('a');
+                        b.href = backUrl;
+                        b.download = `${idName.toLowerCase().replace(/ /g, '_')}_back.png`;
+                        b.click();
+                    }, 500);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    return;
+                }
+                
+                const zip = new JSZip();
+                zip.file(`${idName.toLowerCase().replace(/ /g, '_')}_front.png`, frontBlob);
+                zip.file(`${idName.toLowerCase().replace(/ /g, '_')}_back.png`, backBlob);
+                
+                const content = await zip.generateAsync({ type: 'blob' });
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${idName.toLowerCase().replace(/ /g, '_')}_both.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            } catch(e) {
+                console.error('Download failed:', e);
+                alert('Failed to create ZIP. Downloading separately...');
+                const a = document.createElement('a');
+                a.href = frontUrl;
+                a.download = `${idName.toLowerCase().replace(/ /g, '_')}_front.png`;
+                a.click();
+                setTimeout(() => {
+                    const b = document.createElement('a');
+                    b.href = backUrl;
+                    b.download = `${idName.toLowerCase().replace(/ /g, '_')}_back.png`;
+                    b.click();
+                }, 500);
+                const btn = event.target;
+                btn.innerHTML = '<i class="fas fa-layer-group"></i> Both (ZIP)';
+                btn.disabled = false;
+            }
+        };
+
         loadDashboard();
     </script>
+    <!-- JSZip library for creating ZIP files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </body>
 </html>
