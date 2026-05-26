@@ -845,6 +845,28 @@
             <div class="result-section" id="idResult"><div class="result-header"><i class="fas fa-id-card"></i><h3>Available IDs</h3></div><div id="idList" style="display:flex; flex-direction:column; gap:15px;"></div></div>`;
         }
 
+        // Download single image through backend proxy
+        window.downloadSingle = function(imageUrl, filename) {
+            const downloadUrl = `/api/id-download?url=${encodeURIComponent(imageUrl)}&filename=${encodeURIComponent(filename)}`;
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        // Download both images as ZIP through backend
+        window.downloadBoth = function(frontUrl, backUrl, idName) {
+            const zipUrl = `/api/id-download-both?frontUrl=${encodeURIComponent(frontUrl)}&backUrl=${encodeURIComponent(backUrl)}&idName=${encodeURIComponent(idName)}`;
+            const a = document.createElement('a');
+            a.href = zipUrl;
+            a.download = `${idName.toLowerCase().replace(/ /g, '_')}_both.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
         async function attachIDTemplatesEvents() {
             try {
                 const res = await fetch('/api/id-templates');
@@ -853,16 +875,18 @@
                     const templates = data.templates;
                     let html = '';
                     for (const [key, template] of Object.entries(templates)) {
+                        const safeName = key;
+                        const displayName = template.name;
                         html += `
                             <div class="id-card">
                                 <div class="id-info">
                                     <i class="fas fa-id-card" style="color:#f39c12;"></i>
-                                    <h4>${template.name}</h4>
+                                    <h4>${displayName}</h4>
                                 </div>
                                 <div class="id-buttons">
-                                    <a href="${template.front}" class="download-btn btn-front" download="${template.name.toLowerCase().replace(' ', '_')}_front.png" target="_blank"><i class="fas fa-image"></i> Front Only</a>
-                                    <a href="${template.back}" class="download-btn btn-back" download="${template.name.toLowerCase().replace(' ', '_')}_back.png" target="_blank"><i class="fas fa-image"></i> Back Only</a>
-                                    <button class="download-btn btn-both" onclick="downloadBoth('${template.front}', '${template.back}', '${template.name}')"><i class="fas fa-layer-group"></i> Both (ZIP)</button>
+                                    <button class="download-btn btn-front" onclick="downloadSingle('${template.front}', '${safeName}_front.jpg')"><i class="fas fa-image"></i> Front Only</button>
+                                    <button class="download-btn btn-back" onclick="downloadSingle('${template.back}', '${safeName}_back.jpg')"><i class="fas fa-image"></i> Back Only</button>
+                                    <button class="download-btn btn-both" onclick="downloadBoth('${template.front}', '${template.back}', '${displayName}')"><i class="fas fa-layer-group"></i> Both (ZIP)</button>
                                 </div>
                             </div>
                         `;
@@ -876,78 +900,7 @@
             }
         }
 
-        // Function to download both front and back images (creates a ZIP file)
-        window.downloadBoth = async function(frontUrl, backUrl, idName) {
-            try {
-                // Show loading indicator
-                const btn = event.target;
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Creating ZIP...';
-                btn.disabled = true;
-                
-                // Fetch both images
-                const [frontBlob, backBlob] = await Promise.all([
-                    fetch(frontUrl).then(res => res.blob()),
-                    fetch(backUrl).then(res => res.blob())
-                ]);
-                
-                // Create a ZIP file using JSZip
-                // Note: You need to include JSZip library. Add this to head: <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-                if (typeof JSZip === 'undefined') {
-                    // Fallback: download separately if JSZip not available
-                    const a = document.createElement('a');
-                    a.href = frontUrl;
-                    a.download = `${idName.toLowerCase().replace(/ /g, '_')}_front.png`;
-                    a.click();
-                    setTimeout(() => {
-                        const b = document.createElement('a');
-                        b.href = backUrl;
-                        b.download = `${idName.toLowerCase().replace(/ /g, '_')}_back.png`;
-                        b.click();
-                    }, 500);
-                    btn.innerHTML = originalText;
-                    btn.disabled = false;
-                    return;
-                }
-                
-                const zip = new JSZip();
-                zip.file(`${idName.toLowerCase().replace(/ /g, '_')}_front.png`, frontBlob);
-                zip.file(`${idName.toLowerCase().replace(/ /g, '_')}_back.png`, backBlob);
-                
-                const content = await zip.generateAsync({ type: 'blob' });
-                const url = URL.createObjectURL(content);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${idName.toLowerCase().replace(/ /g, '_')}_both.zip`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            } catch(e) {
-                console.error('Download failed:', e);
-                alert('Failed to create ZIP. Downloading separately...');
-                const a = document.createElement('a');
-                a.href = frontUrl;
-                a.download = `${idName.toLowerCase().replace(/ /g, '_')}_front.png`;
-                a.click();
-                setTimeout(() => {
-                    const b = document.createElement('a');
-                    b.href = backUrl;
-                    b.download = `${idName.toLowerCase().replace(/ /g, '_')}_back.png`;
-                    b.click();
-                }, 500);
-                const btn = event.target;
-                btn.innerHTML = '<i class="fas fa-layer-group"></i> Both (ZIP)';
-                btn.disabled = false;
-            }
-        };
-
         loadDashboard();
     </script>
-    <!-- JSZip library for creating ZIP files -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </body>
 </html>
