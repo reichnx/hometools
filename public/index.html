@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Home Tools</title>
+    <title>Home Tools - Remove BG, FB Share, Downloader, Cover Maker</title>
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -878,7 +878,7 @@
             } catch(e) { console.error(e); }
         }
 
-        // Media Downloader with performance tracking and UPDATED Spotify handler
+        // Media Downloader with performance tracking and UPDATED Spotify handler with proxy
         function getMediaDownloaderHTML() {
             return `<div class="card"><h2><i class="fas fa-download"></i> Media Downloader</h2><p>Download videos & audio from TikTok, Instagram, YouTube, Spotify, Facebook, SoundCloud</p></div>
             <div class="platforms" id="downloadPlatforms"></div>
@@ -945,7 +945,7 @@
             };
         }
 
-        // UPDATED: Complete displayDownloadResult function with proper Spotify handling
+        // UPDATED: Complete displayDownloadResult function with Spotify download proxy
         function displayDownloadResult(response, platform) {
             const data = response.data;
             
@@ -987,7 +987,7 @@
                 }
             }
             else if (platform === 'spotify') {
-                // Handle the new Spotify API response format
+                // Handle the Spotify API response format with proxy download
                 const trackData = data.data || data;
                 const title = trackData.title || trackData.name || 'Spotify Track';
                 const artist = trackData.artist || trackData.artists || '';
@@ -998,6 +998,9 @@
                 const note = trackData.downloadNote || trackData.note || 'Download link expires soon - save immediately!';
                 
                 if (downloadUrl) {
+                    // Use the proxy endpoint to download the file
+                    const proxyDownloadUrl = `/api/spotify-download?url=${encodeURIComponent(downloadUrl)}`;
+                    
                     html += `
                         <div class="media-card spotify-card" style="display:block;">
                             <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
@@ -1009,7 +1012,7 @@
                                     ${expires ? `<div class="media-meta" style="font-size:0.75rem; color:#e74c3c; margin-top:5px;">⚠️ Link expires: ${new Date(expires).toLocaleString()}</div>` : ''}
                                     ${note ? `<div class="media-meta" style="font-size:0.7rem; opacity:0.6; margin-top:3px;">${escapeHtml(note)}</div>` : ''}
                                 </div>
-                                <a href="${downloadUrl}" class="download-btn" download target="_blank" style="background: linear-gradient(135deg, #1DB954, #169c45);">
+                                <a href="${proxyDownloadUrl}" class="download-btn" download target="_blank" style="background: linear-gradient(135deg, #1DB954, #169c45);">
                                     <i class="fas fa-download"></i> Download MP3
                                 </a>
                             </div>
