@@ -7,6 +7,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
+const JSZip = require('jszip');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -626,6 +627,7 @@ const ID_TEMPLATES = {
   }
 };
 
+// Get ID templates list
 app.get('/api/id-templates', async (req, res) => {
   try {
     await updateCounter('idtemplates');
@@ -635,6 +637,76 @@ app.get('/api/id-templates', async (req, res) => {
     console.error('ID Templates error:', error.message);
     await updatePerformance('idtemplates', 0, 1);
     res.status(500).json({ success: false, error: 'Failed to fetch ID templates' });
+  }
+});
+
+// Download single image from URL (proxy to avoid CORS)
+app.get('/api/id-download', async (req, res) => {
+  try {
+    const { url, filename } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL is required' });
+    }
+    
+    const response = await axios({
+      method: 'GET',
+      url: url,
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://iili.io/',
+        'Origin': 'https://iili.io'
+      },
+      timeout: 30000
+    });
+    
+    const fileExt = path.extname(url).split('?')[0] || '.jpg';
+    const finalFilename = filename || `id_image${fileExt}`;
+    
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Content-Disposition', `attachment; filename="${finalFilename}"`);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    response.data.pipe(res);
+    
+  } catch (error) {
+    console.error('ID Download error:', error.message);
+    res.status(500).json({ success: false, error: 'Failed to download image' });
+  }
+});
+
+// Download both images as ZIP
+app.get('/api/id-download-both', async (req, res) => {
+  try {
+    const { frontUrl, backUrl, idName } = req.query;
+    
+    if (!frontUrl || !backUrl) {
+      return res.status(400).json({ success: false, error: 'Both front and back URLs are required' });
+    }
+    
+    // Fetch both images
+    const [frontResponse, backResponse] = await Promise.all([
+      axios.get(frontUrl, { responseType: 'arraybuffer', timeout: 30000 }),
+      axios.get(backUrl, { responseType: 'arraybuffer', timeout: 30000 })
+    ]);
+    
+    // Create ZIP file
+    const zip = new JSZip();
+    const safeName = idName ? idName.toLowerCase().replace(/ /g, '_') : 'id';
+    
+    zip.file(`${safeName}_front.jpg`, frontResponse.data);
+    zip.file(`${safeName}_back.jpg`, backResponse.data);
+    
+    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+    
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}_both.zip"`);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(zipBuffer);
+    
+  } catch (error) {
+    console.error('ID ZIP Download error:', error.message);
+    res.status(500).json({ success: false, error: 'Failed to create ZIP file' });
   }
 });
 
