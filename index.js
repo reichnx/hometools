@@ -7,7 +7,6 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
-const session = require('express-session');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,12 +25,6 @@ app.use(cookieParser());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 app.use(express.static('public'));
-app.use(session({
-  secret: 'your-secret-key-change-in-production',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
-}));
 
 // ========== FILE STORAGE SETUP ==========
 const storageDir = path.join(__dirname, 'storage');
@@ -118,28 +111,66 @@ app.post('/api/removebg', upload.single('image'), async (req, res) => {
   }
 });
 
-// ========== FBSHARE (WITH BACKUP API & NO RATE LIMIT) ==========
+// ========== FBSHARE (NO RATE LIMIT, WITH BACKUP API) ==========
 const ua_list = [
   "Mozilla/5.0 (Linux; Android 10; Wildfire E Lite) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/105.0.5195.136 Mobile Safari/537.36[FBAN/EMA;FBLC/en_US;FBAV/298.0.0.10.115;]",
-  "Mozilla/5.0 (Linux; Android 11; KINGKONG 5 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/87.0.4280.141 Mobile Safari/537.36[FBAN/EMA;FBLC/fr_FR;FBAV/320.0.0.12.108;]"
+  "Mozilla/5.0 (Linux; Android 11; KINGKONG 5 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/87.0.4280.141 Mobile Safari/537.36[FBAN/EMA;FBLC/fr_FR;FBAV/320.0.0.12.108;]",
+  "Mozilla/5.0 (Linux; Android 11; G91 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/106.0.5249.126 Mobile Safari/537.36[FBAN/EMA;FBLC/fr_FR;FBAV/325.0.1.4.108;]"
 ];
 
 let shareHistory = [];
 let activeShares = new Map();
+const HISTORY_FILE = path.join(__dirname, 'history.json');
 
-async function extractToken(cookie, ua) {
-  for (let i = 0; i < 3; i++) {
+// Load history on startup
+(async () => {
+  try {
+    const data = await fs.readFile(HISTORY_FILE, 'utf8');
+    shareHistory = JSON.parse(data);
+  } catch (err) {
+    console.log('No existing history found, starting fresh');
+    shareHistory = [];
+  }
+})();
+
+// Save history periodically
+setInterval(async () => {
+  try {
+    await fs.writeFile(HISTORY_FILE, JSON.stringify(shareHistory, null, 2));
+  } catch (err) {
+    console.error('Error saving history:', err);
+  }
+}, 60000);
+
+async function extractToken(cookie, ua, retries = 3) {
+  for (let i = 0; i < retries; i++) {
     try {
       const response = await axios.get("https://business.facebook.com/business_locations", {
-        headers: { "user-agent": ua, "Cookie": cookie, "accept": "text/html" },
-        timeout: 15000
+        headers: {
+          "user-agent": ua,
+          "referer": "https://www.facebook.com/",
+          "Cookie": cookie,
+          "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "accept-language": "en-US,en;q=0.5",
+          "dnt": "1",
+          "connection": "keep-alive",
+          "upgrade-insecure-requests": "1"
+        },
+        timeout: 15000,
+        maxRedirects: 5
       });
-      const match = response.data.match(/(EAAG\w+)/) || response.data.match(/(EAA[A-Za-z0-9]+)/);
-      if (match) return match[1];
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    } catch (err) { console.error(`Token attempt ${i+1} failed`); }
+      const patterns = [/(EAAG\w+)/, /(EAA[A-Za-z0-9]+)/, /access_token=([^&\s"]+)/];
+      for (const pattern of patterns) {
+        const match = response.data.match(pattern);
+        if (match) return match[1];
+      }
+      return null;
+    } catch (err) {
+      console.error(`Token extraction attempt ${i + 1} failed:`, err.message);
+      if (i === retries - 1) return null;
+      await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1)));
+    }
   }
-  return null;
 }
 
 async function performShare(postLink, token, cookie, ua, shareId, totalLimit) {
@@ -149,74 +180,122 @@ async function performShare(postLink, token, cookie, ua, shareId, totalLimit) {
     try {
       const response = await axios.post("https://graph.facebook.com/v18.0/me/feed", null, {
         params: { link: postLink, access_token: token, published: 0 },
-        headers: { "user-agent": ua, "Cookie": cookie },
+        headers: {
+          "user-agent": ua,
+          "Cookie": cookie,
+          "accept": "application/json, text/plain, */*",
+          "origin": "https://business.facebook.com",
+          "referer": "https://business.facebook.com/"
+        },
         timeout: 15000
       });
-      if (response.data?.id) results.push({ success: true, id: response.data.id });
+      if (response.data && response.data.id) {
+        results.push({ success: true, id: response.data.id });
+        const item = shareHistory.find(h => h.id === shareId);
+        if (item) {
+          item.success = results.length;
+          item.progress = Math.round((results.length / totalLimit) * 100);
+        }
+      }
       await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
     } catch (err) {
       results.push({ success: false, error: err.message });
-      if (err.response?.status === 429) await new Promise(resolve => setTimeout(resolve, 10000));
+      if (err.response && err.response.status === 429) {
+        await new Promise(resolve => setTimeout(resolve, 10000));
+      }
     }
   }
-  return { success: results.filter(r => r.success).length, failed: results.filter(r => !r.success).length, total: results.length };
+  return {
+    success: results.filter(r => r.success).length,
+    failed: results.filter(r => !r.success).length,
+    total: results.length
+  };
 }
 
 app.post('/api/share', async (req, res) => {
   const shareId = Date.now();
   try {
     await updateCounter('fbshare');
-    let { cookie, link, limit } = req.body;
+    const { cookie, link, limit } = req.body;
     const limitNum = parseInt(limit);
     
     if (!cookie || !link || !limitNum || limitNum > 5000) {
       return res.status(400).json({ status: false, message: 'Cookie, link, and limit (max 5000) are required.' });
     }
     
-    // Try primary method first
     const ua = ua_list[Math.floor(Math.random() * ua_list.length)];
     let token = await extractToken(cookie, ua);
     let successCount = 0;
-    
-    if (token) {
-      const result = await performShare(link, token, cookie, ua, shareId, limitNum);
-      successCount = result.success;
-    }
-    
-    // If primary fails or returns low success, try backup API
-    if (successCount < limitNum * 0.5) {
-      console.log('Using backup API for remaining shares...');
-      const backupUrl = `https://vern-rest-api.vercel.app/api/share?cookie=${encodeURIComponent(cookie)}&link=${encodeURIComponent(link)}&limit=${limitNum - successCount}`;
-      const backupResponse = await axios.get(backupUrl, { timeout: 30000 });
-      if (backupResponse.data?.status && backupResponse.data?.success_count) {
-        successCount += backupResponse.data.success_count;
-      }
-    }
     
     const historyEntry = {
       id: shareId,
       link,
       requested: limitNum,
-      success: successCount,
-      failed: limitNum - successCount,
-      status: 'completed',
-      timestamp: new Date().toISOString()
+      success: 0,
+      failed: 0,
+      status: 'processing',
+      progress: 0,
+      startTime: new Date().toISOString(),
+      endTime: null
     };
     shareHistory.unshift(historyEntry);
-    if (shareHistory.length > 50) shareHistory.pop();
+    activeShares.set(shareId, 'active');
     
-    res.json({ status: true, message: `Shared ${successCount} times.`, share_id: shareId, success_count: successCount, history: historyEntry });
+    if (token) {
+      const result = await performShare(link, token, cookie, ua, shareId, limitNum);
+      successCount = result.success;
+      historyEntry.success = result.success;
+      historyEntry.failed = result.failed;
+    }
+    
+    // Backup API fallback
+    if (successCount < limitNum * 0.5) {
+      console.log('Using backup API for remaining shares...');
+      try {
+        const backupUrl = `https://vern-rest-api.vercel.app/api/share?cookie=${encodeURIComponent(cookie)}&link=${encodeURIComponent(link)}&limit=${limitNum - successCount}`;
+        const backupResponse = await axios.get(backupUrl, { timeout: 30000 });
+        if (backupResponse.data?.status && backupResponse.data?.success_count) {
+          successCount += backupResponse.data.success_count;
+          historyEntry.success = successCount;
+          historyEntry.failed = limitNum - successCount;
+        }
+      } catch (backupErr) {
+        console.error('Backup API failed:', backupErr.message);
+      }
+    }
+    
+    historyEntry.status = successCount > 0 ? 'completed' : 'failed';
+    historyEntry.endTime = new Date().toISOString();
+    historyEntry.progress = 100;
+    activeShares.delete(shareId);
+    
+    res.json({ 
+      status: true, 
+      message: `Shared ${successCount} times successfully.`, 
+      share_id: shareId, 
+      success_count: successCount,
+      failed_count: limitNum - successCount,
+      history: historyEntry 
+    });
+    
   } catch (error) {
     console.error('Share error:', error);
+    activeShares.delete(shareId);
     res.status(500).json({ status: false, message: 'Server error. Please try again.' });
   }
 });
 
 app.get('/api/share/history', (req, res) => {
-  res.json({ status: true, history: shareHistory });
+  res.json({ status: true, history: shareHistory.slice(0, 50) });
 });
 
-// ========== MEDIA DOWNLOADER (BACKEND PROXY) ==========
+app.get('/api/share/:id/progress', (req, res) => {
+  const share = shareHistory.find(h => h.id == req.params.id);
+  if (!share) return res.status(404).json({ status: false });
+  res.json({ status: true, share });
+});
+
+// ========== MEDIA DOWNLOADER ==========
 const API_ENDPOINTS = {
   tiktok: (url) => `https://api.zenithapi.qzz.io/tiktok?url=${encodeURIComponent(url)}`,
   instagram: (url) => `https://api-library-kohi.onrender.com/api/alldl?url=${encodeURIComponent(url)}`,
@@ -233,7 +312,6 @@ app.post('/api/download-media', async (req, res) => {
     if (!platform || !url) {
       return res.status(400).json({ success: false, error: 'Platform and URL are required' });
     }
-    
     const apiUrl = API_ENDPOINTS[platform](url);
     const response = await axios.get(apiUrl, { timeout: 30000 });
     res.json({ success: true, data: response.data, platform });
@@ -248,7 +326,11 @@ app.get('/api/fbcover', async (req, res) => {
   try {
     await updateCounter('fbcover');
     const { name, color, address, email, subname, sdt, uid } = req.query;
-    const coverUrl = `https://hiroshi-api.onrender.com/canvas/fbcoverv2?name=${encodeURIComponent(name || 'User')}&color=${encodeURIComponent(color || 'blue')}&address=${encodeURIComponent(address || '')}&email=${encodeURIComponent(email || '')}&subname=${encodeURIComponent(subname || '')}&sdt=${encodeURIComponent(sdt || '')}&uid=${encodeURIComponent(uid || '')}`;
+    // UID is now required
+    if (!uid) {
+      return res.status(400).json({ success: false, error: 'Facebook UID is required' });
+    }
+    const coverUrl = `https://hiroshi-api.onrender.com/canvas/fbcoverv2?name=${encodeURIComponent(name || 'User')}&color=${encodeURIComponent(color || 'blue')}&address=${encodeURIComponent(address || '')}&email=${encodeURIComponent(email || '')}&subname=${encodeURIComponent(subname || '')}&sdt=${encodeURIComponent(sdt || '')}&uid=${encodeURIComponent(uid)}`;
     
     const response = await axios.get(coverUrl, { responseType: 'arraybuffer', timeout: 30000 });
     res.set('Content-Type', 'image/png');
@@ -264,9 +346,24 @@ app.get('/api/stats', async (req, res) => {
   try {
     const counterPath = path.join(storageDir, 'counter.json');
     const data = await fs.readFile(counterPath, 'utf8');
-    res.json({ success: true, stats: JSON.parse(data) });
+    const counter = JSON.parse(data);
+    
+    // Calculate share stats
+    const totalShares = shareHistory.length;
+    const totalSuccess = shareHistory.reduce((acc, curr) => acc + (curr.success || 0), 0);
+    const totalFailed = shareHistory.reduce((acc, curr) => acc + (curr.failed || 0), 0);
+    const successRate = totalShares > 0 ? Math.round((totalSuccess / (totalSuccess + totalFailed)) * 100) : 0;
+    
+    res.json({ 
+      success: true, 
+      stats: {
+        visits: counter.visits,
+        toolUsage: counter.toolUsage,
+        shareStats: { totalShares, totalSuccess, totalFailed, successRate }
+      }
+    });
   } catch (err) {
-    res.json({ success: true, stats: { visits: 0, toolUsage: {} } });
+    res.json({ success: true, stats: { visits: 0, toolUsage: {}, shareStats: { totalShares: 0, totalSuccess: 0, totalFailed: 0, successRate: 0 } } });
   }
 });
 
@@ -279,32 +376,16 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/dashboard-data', async (req, res) => {
-  const counterPath = path.join(storageDir, 'counter.json');
-  try {
-    const data = await fs.readFile(counterPath, 'utf8');
-    res.json(JSON.parse(data));
-  } catch {
-    res.json({ visits: 0, toolUsage: {} });
-  }
-});
-
-// Error pages
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
+
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).sendFile(path.join(__dirname, 'public', '500.html'));
 });
 
-// ========== SERVER START ==========
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📁 Environment: ${process.env.NODE_ENV || 'development'}`);
-});
-
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, closing server...');
-  process.exit(0);
 });
