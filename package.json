@@ -1,7 +1,7 @@
 {
-  "name": "media-tools-dashboard",
-  "version": "1.0.0",
-  "description": "All-in-one media tools: Remove Background, FBshare, Media Downloader, FBcover Maker",
+  "name": "home-tools",
+  "version": "2.0.0",
+  "description": "Home Tools - Remove Background, FB Share, Media Downloader, FB Cover Maker",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -14,9 +14,7 @@
     "cors": "^2.8.5",
     "helmet": "^7.0.0",
     "compression": "^1.7.4",
-    "cookie-parser": "^1.4.6",
-    "express-rate-limit": "^7.1.5",
-    "express-session": "^1.18.0"
+    "cookie-parser": "^1.4.6"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
