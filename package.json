@@ -1,12 +1,25 @@
 {
   "name": "home-tools",
   "version": "2.0.0",
-  "description": "Home Tools - Remove Background, FB Share, Media Downloader, FB Cover Maker",
+  "description": "Home Tools - Complete suite for Remove Background, FB Share, Media Downloader, and FB Cover Maker",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
+  "keywords": [
+    "background-remover",
+    "facebook-share",
+    "media-downloader",
+    "spotify-downloader",
+    "youtube-downloader",
+    "tiktok-downloader",
+    "instagram-downloader",
+    "facebook-cover",
+    "image-editor"
+  ],
+  "author": "Home Tools",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
     "axios": "^1.6.0",
@@ -18,5 +31,17 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
-  }
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": {
+    "url": ""
+  },
+  "homepage": ""
 }
