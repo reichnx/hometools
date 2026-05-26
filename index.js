@@ -29,17 +29,35 @@ app.use(express.static('public'));
 // ========== FILE STORAGE SETUP ==========
 const storageDir = path.join(__dirname, 'storage');
 const uploadsDir = path.join(__dirname, 'public/uploads');
+const historyFile = path.join(storageDir, 'shareHistory.json');
+const counterFile = path.join(storageDir, 'counter.json');
 
+// Ensure directories exist
 async function ensureDirectories() {
   try {
     await fs.mkdir(storageDir, { recursive: true });
     await fs.mkdir(uploadsDir, { recursive: true });
     
-    const counterPath = path.join(storageDir, 'counter.json');
+    // Initialize counter file if not exists
     try {
-      await fs.access(counterPath);
+      await fs.access(counterFile);
     } catch {
-      await fs.writeFile(counterPath, JSON.stringify({ visits: 0, toolUsage: {} }, null, 2));
+      await fs.writeFile(counterFile, JSON.stringify({ 
+        visits: 0, 
+        toolUsage: {
+          removebg: 0,
+          fbshare: 0,
+          mediadownloader: 0,
+          fbcover: 0
+        }
+      }, null, 2));
+    }
+    
+    // Initialize share history file if not exists
+    try {
+      await fs.access(historyFile);
+    } catch {
+      await fs.writeFile(historyFile, JSON.stringify([], null, 2));
     }
   } catch (err) {
     console.error('Directory creation error:', err);
@@ -50,20 +68,61 @@ ensureDirectories();
 // ========== UTILITY FUNCTIONS ==========
 async function updateCounter(toolName = null) {
   try {
-    const counterPath = path.join(storageDir, 'counter.json');
-    const data = await fs.readFile(counterPath, 'utf8');
+    const data = await fs.readFile(counterFile, 'utf8');
     const counter = JSON.parse(data);
     counter.visits = (counter.visits || 0) + 1;
-    if (toolName) {
+    if (toolName && counter.toolUsage[toolName] !== undefined) {
       counter.toolUsage[toolName] = (counter.toolUsage[toolName] || 0) + 1;
     }
-    await fs.writeFile(counterPath, JSON.stringify(counter, null, 2));
+    await fs.writeFile(counterFile, JSON.stringify(counter, null, 2));
     return counter;
   } catch (err) {
     console.error('Counter update error:', err);
     return null;
   }
 }
+
+async function getStats() {
+  try {
+    const counterData = await fs.readFile(counterFile, 'utf8');
+    const counter = JSON.parse(counterData);
+    const historyData = await fs.readFile(historyFile, 'utf8');
+    const shareHistory = JSON.parse(historyData);
+    
+    const totalShares = shareHistory.length;
+    const totalSuccess = shareHistory.reduce((acc, curr) => acc + (curr.success || 0), 0);
+    const totalFailed = shareHistory.reduce((acc, curr) => acc + (curr.failed || 0), 0);
+    const successRate = (totalSuccess + totalFailed) > 0 ? Math.round((totalSuccess / (totalSuccess + totalFailed)) * 100) : 0;
+    
+    return {
+      visits: counter.visits || 0,
+      toolUsage: counter.toolUsage || {},
+      shareStats: { totalShares, totalSuccess, totalFailed, successRate }
+    };
+  } catch (err) {
+    console.error('Stats error:', err);
+    return { visits: 0, toolUsage: {}, shareStats: { totalShares: 0, totalSuccess: 0, totalFailed: 0, successRate: 0 } };
+  }
+}
+
+// Clean old uploaded files (older than 1 hour)
+async function cleanupOldFiles() {
+  try {
+    const files = await fs.readdir(uploadsDir);
+    const now = Date.now();
+    for (const file of files) {
+      const filePath = path.join(uploadsDir, file);
+      const stat = await fs.stat(filePath);
+      if (now - stat.mtimeMs > 3600000) { // 1 hour
+        await fs.unlink(filePath).catch(() => {});
+        console.log(`Cleaned up: ${file}`);
+      }
+    }
+  } catch (err) {
+    console.error('Cleanup error:', err);
+  }
+}
+setInterval(cleanupOldFiles, 30 * 60 * 1000); // Run every 30 minutes
 
 // ========== REMOVE BACKGROUND ==========
 const multerStorage = multer.diskStorage({
@@ -73,6 +132,7 @@ const multerStorage = multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname).toLowerCase());
   }
 });
+
 const upload = multer({ 
   storage: multerStorage,
   limits: { fileSize: 10 * 1024 * 1024 },
@@ -111,36 +171,14 @@ app.post('/api/removebg', upload.single('image'), async (req, res) => {
   }
 });
 
-// ========== FBSHARE (NO RATE LIMIT, WITH BACKUP API) ==========
+// ========== FBSHARE WITH LIVE PROGRESS & CANCELLATION ==========
 const ua_list = [
   "Mozilla/5.0 (Linux; Android 10; Wildfire E Lite) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/105.0.5195.136 Mobile Safari/537.36[FBAN/EMA;FBLC/en_US;FBAV/298.0.0.10.115;]",
   "Mozilla/5.0 (Linux; Android 11; KINGKONG 5 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/87.0.4280.141 Mobile Safari/537.36[FBAN/EMA;FBLC/fr_FR;FBAV/320.0.0.12.108;]",
   "Mozilla/5.0 (Linux; Android 11; G91 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/106.0.5249.126 Mobile Safari/537.36[FBAN/EMA;FBLC/fr_FR;FBAV/325.0.1.4.108;]"
 ];
 
-let shareHistory = [];
-let activeShares = new Map();
-const HISTORY_FILE = path.join(__dirname, 'history.json');
-
-// Load history on startup
-(async () => {
-  try {
-    const data = await fs.readFile(HISTORY_FILE, 'utf8');
-    shareHistory = JSON.parse(data);
-  } catch (err) {
-    console.log('No existing history found, starting fresh');
-    shareHistory = [];
-  }
-})();
-
-// Save history periodically
-setInterval(async () => {
-  try {
-    await fs.writeFile(HISTORY_FILE, JSON.stringify(shareHistory, null, 2));
-  } catch (err) {
-    console.error('Error saving history:', err);
-  }
-}, 60000);
+let activeShares = new Map(); // Track active shares for cancellation
 
 async function extractToken(cookie, ua, retries = 3) {
   for (let i = 0; i < retries; i++) {
@@ -173,10 +211,16 @@ async function extractToken(cookie, ua, retries = 3) {
   }
 }
 
-async function performShare(postLink, token, cookie, ua, shareId, totalLimit) {
-  const results = [];
+async function performShare(postLink, token, cookie, ua, shareId, totalLimit, updateProgress) {
+  const results = { success: 0, failed: 0 };
+  
   for (let i = 0; i < totalLimit; i++) {
-    if (activeShares.get(shareId) === 'cancelled') break;
+    // Check if cancelled
+    if (activeShares.get(shareId) === 'cancelled') {
+      console.log(`Share ${shareId} was cancelled`);
+      break;
+    }
+    
     try {
       const response = await axios.post("https://graph.facebook.com/v18.0/me/feed", null, {
         params: { link: postLink, access_token: token, published: 0 },
@@ -189,31 +233,48 @@ async function performShare(postLink, token, cookie, ua, shareId, totalLimit) {
         },
         timeout: 15000
       });
+      
       if (response.data && response.data.id) {
-        results.push({ success: true, id: response.data.id });
-        const item = shareHistory.find(h => h.id === shareId);
-        if (item) {
-          item.success = results.length;
-          item.progress = Math.round((results.length / totalLimit) * 100);
-        }
+        results.success++;
+        updateProgress(results.success, results.failed, Math.round(((results.success + results.failed) / totalLimit) * 100));
       }
-      await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
     } catch (err) {
-      results.push({ success: false, error: err.message });
+      results.failed++;
+      updateProgress(results.success, results.failed, Math.round(((results.success + results.failed) / totalLimit) * 100));
+      
       if (err.response && err.response.status === 429) {
         await new Promise(resolve => setTimeout(resolve, 10000));
       }
     }
+    
+    // Small delay between requests
+    await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
   }
-  return {
-    success: results.filter(r => r.success).length,
-    failed: results.filter(r => !r.success).length,
-    total: results.length
-  };
+  
+  return results;
+}
+
+// Save share history to file
+async function saveShareHistory(history) {
+  try {
+    await fs.writeFile(historyFile, JSON.stringify(history, null, 2));
+  } catch (err) {
+    console.error('Error saving share history:', err);
+  }
+}
+
+// Load share history
+async function loadShareHistory() {
+  try {
+    const data = await fs.readFile(historyFile, 'utf8');
+    return JSON.parse(data);
+  } catch (err) {
+    return [];
+  }
 }
 
 app.post('/api/share', async (req, res) => {
-  const shareId = Date.now();
+  const shareId = Date.now().toString();
   try {
     await updateCounter('fbshare');
     const { cookie, link, limit } = req.body;
@@ -223,9 +284,21 @@ app.post('/api/share', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Cookie, link, and limit (max 5000) are required.' });
     }
     
+    // Send immediate response with share_id
+    res.json({ 
+      status: true, 
+      message: 'Share started', 
+      share_id: shareId,
+      total_limit: limitNum
+    });
+    
+    // Load existing history
+    let shareHistory = await loadShareHistory();
+    
     const ua = ua_list[Math.floor(Math.random() * ua_list.length)];
     let token = await extractToken(cookie, ua);
     let successCount = 0;
+    let failedCount = 0;
     
     const historyEntry = {
       id: shareId,
@@ -238,61 +311,116 @@ app.post('/api/share', async (req, res) => {
       startTime: new Date().toISOString(),
       endTime: null
     };
+    
     shareHistory.unshift(historyEntry);
+    await saveShareHistory(shareHistory);
     activeShares.set(shareId, 'active');
     
+    // Progress update function
+    const updateProgress = async (success, failed, progress) => {
+      successCount = success;
+      failedCount = failed;
+      const updatedHistory = await loadShareHistory();
+      const entry = updatedHistory.find(h => h.id === shareId);
+      if (entry) {
+        entry.success = success;
+        entry.failed = failed;
+        entry.progress = progress;
+        await saveShareHistory(updatedHistory);
+      }
+    };
+    
+    let result = { success: 0, failed: 0 };
+    
     if (token) {
-      const result = await performShare(link, token, cookie, ua, shareId, limitNum);
+      result = await performShare(link, token, cookie, ua, shareId, limitNum, updateProgress);
       successCount = result.success;
-      historyEntry.success = result.success;
-      historyEntry.failed = result.failed;
+      failedCount = result.failed;
     }
     
-    // Backup API fallback
-    if (successCount < limitNum * 0.5) {
+    // Backup API fallback if primary had low success
+    if (successCount < limitNum * 0.5 && activeShares.get(shareId) !== 'cancelled') {
       console.log('Using backup API for remaining shares...');
       try {
         const backupUrl = `https://vern-rest-api.vercel.app/api/share?cookie=${encodeURIComponent(cookie)}&link=${encodeURIComponent(link)}&limit=${limitNum - successCount}`;
         const backupResponse = await axios.get(backupUrl, { timeout: 30000 });
         if (backupResponse.data?.status && backupResponse.data?.success_count) {
           successCount += backupResponse.data.success_count;
-          historyEntry.success = successCount;
-          historyEntry.failed = limitNum - successCount;
+          failedCount = limitNum - successCount;
+          await updateProgress(successCount, failedCount, 100);
         }
       } catch (backupErr) {
         console.error('Backup API failed:', backupErr.message);
       }
     }
     
-    historyEntry.status = successCount > 0 ? 'completed' : 'failed';
-    historyEntry.endTime = new Date().toISOString();
-    historyEntry.progress = 100;
-    activeShares.delete(shareId);
+    // Finalize history entry
+    const finalHistory = await loadShareHistory();
+    const finalEntry = finalHistory.find(h => h.id === shareId);
+    if (finalEntry) {
+      finalEntry.status = successCount > 0 ? 'completed' : 'failed';
+      finalEntry.endTime = new Date().toISOString();
+      finalEntry.success = successCount;
+      finalEntry.failed = failedCount;
+      finalEntry.progress = 100;
+      await saveShareHistory(finalHistory);
+    }
     
-    res.json({ 
-      status: true, 
-      message: `Shared ${successCount} times successfully.`, 
-      share_id: shareId, 
-      success_count: successCount,
-      failed_count: limitNum - successCount,
-      history: historyEntry 
-    });
+    activeShares.delete(shareId);
     
   } catch (error) {
     console.error('Share error:', error);
     activeShares.delete(shareId);
-    res.status(500).json({ status: false, message: 'Server error. Please try again.' });
+    // Only send error if headers haven't been sent yet
+    if (!res.headersSent) {
+      res.status(500).json({ status: false, message: 'Server error. Please try again.' });
+    }
   }
 });
 
-app.get('/api/share/history', (req, res) => {
-  res.json({ status: true, history: shareHistory.slice(0, 50) });
+app.get('/api/share/history', async (req, res) => {
+  const history = await loadShareHistory();
+  res.json({ status: true, history: history.slice(0, 50) });
 });
 
-app.get('/api/share/:id/progress', (req, res) => {
-  const share = shareHistory.find(h => h.id == req.params.id);
-  if (!share) return res.status(404).json({ status: false });
-  res.json({ status: true, share });
+app.get('/api/share/:id/progress', async (req, res) => {
+  const history = await loadShareHistory();
+  const share = history.find(h => h.id === req.params.id);
+  if (!share) {
+    return res.status(404).json({ status: false, message: 'Share not found' });
+  }
+  res.json({ 
+    status: true, 
+    share: {
+      id: share.id,
+      progress: share.progress || 0,
+      success: share.success || 0,
+      failed: share.failed || 0,
+      requested: share.requested,
+      status: share.status,
+      active: activeShares.has(share.id)
+    }
+  });
+});
+
+app.post('/api/share/:id/cancel', async (req, res) => {
+  const shareId = req.params.id;
+  
+  if (activeShares.has(shareId)) {
+    activeShares.set(shareId, 'cancelled');
+    
+    const history = await loadShareHistory();
+    const share = history.find(h => h.id === shareId);
+    if (share) {
+      share.status = 'cancelled';
+      share.endTime = new Date().toISOString();
+      await saveShareHistory(history);
+    }
+    
+    res.json({ status: true, message: 'Share cancelled successfully' });
+  } else {
+    res.status(404).json({ status: false, message: 'No active share found with that ID' });
+  }
 });
 
 // ========== MEDIA DOWNLOADER ==========
@@ -326,14 +454,16 @@ app.get('/api/fbcover', async (req, res) => {
   try {
     await updateCounter('fbcover');
     const { name, color, address, email, subname, sdt, uid } = req.query;
-    // UID is now required
+    
     if (!uid) {
       return res.status(400).json({ success: false, error: 'Facebook UID is required' });
     }
+    
     const coverUrl = `https://hiroshi-api.onrender.com/canvas/fbcoverv2?name=${encodeURIComponent(name || 'User')}&color=${encodeURIComponent(color || 'blue')}&address=${encodeURIComponent(address || '')}&email=${encodeURIComponent(email || '')}&subname=${encodeURIComponent(subname || '')}&sdt=${encodeURIComponent(sdt || '')}&uid=${encodeURIComponent(uid)}`;
     
     const response = await axios.get(coverUrl, { responseType: 'arraybuffer', timeout: 30000 });
     res.set('Content-Type', 'image/png');
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.send(response.data);
   } catch (error) {
     console.error('Cover maker error:', error.message);
@@ -343,28 +473,8 @@ app.get('/api/fbcover', async (req, res) => {
 
 // ========== STATS & HEALTH ==========
 app.get('/api/stats', async (req, res) => {
-  try {
-    const counterPath = path.join(storageDir, 'counter.json');
-    const data = await fs.readFile(counterPath, 'utf8');
-    const counter = JSON.parse(data);
-    
-    // Calculate share stats
-    const totalShares = shareHistory.length;
-    const totalSuccess = shareHistory.reduce((acc, curr) => acc + (curr.success || 0), 0);
-    const totalFailed = shareHistory.reduce((acc, curr) => acc + (curr.failed || 0), 0);
-    const successRate = totalShares > 0 ? Math.round((totalSuccess / (totalSuccess + totalFailed)) * 100) : 0;
-    
-    res.json({ 
-      success: true, 
-      stats: {
-        visits: counter.visits,
-        toolUsage: counter.toolUsage,
-        shareStats: { totalShares, totalSuccess, totalFailed, successRate }
-      }
-    });
-  } catch (err) {
-    res.json({ success: true, stats: { visits: 0, toolUsage: {}, shareStats: { totalShares: 0, totalSuccess: 0, totalFailed: 0, successRate: 0 } } });
-  }
+  const stats = await getStats();
+  res.json({ success: true, stats });
 });
 
 app.get('/api/health', (req, res) => {
@@ -376,6 +486,7 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Error handlers
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
@@ -385,7 +496,19 @@ app.use((err, req, res, next) => {
   res.status(500).sendFile(path.join(__dirname, 'public', '500.html'));
 });
 
+// ========== SERVER START ==========
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📁 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🚀 Home Tools Server running on http://localhost:${PORT}`);
+  console.log(`📁 Storage directory: ${storageDir}`);
+  console.log(`📁 Uploads directory: ${uploadsDir}`);
+  console.log(`📁 History file: ${historyFile}`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, saving data and closing...');
+  // Clean up any pending uploads
+  await cleanupOldFiles();
+  process.exit(0);
 });
