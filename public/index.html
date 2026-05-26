@@ -166,20 +166,36 @@
         /* Stats Dashboard */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
         .stat-card {
             border-radius: 20px;
             padding: 20px;
-            text-align: center;
             transition: transform 0.3s ease;
         }
         .stat-card:hover { transform: translateY(-5px); }
-        .stat-card i { font-size: 2rem; margin-bottom: 10px; }
-        .stat-card h3 { font-size: 1.6rem; font-weight: 800; margin: 10px 0; }
-        .stat-card p { font-size: 0.85rem; opacity: 0.8; }
+        .stat-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(102,126,234,0.2);
+        }
+        .stat-header i { font-size: 2rem; }
+        .stat-header h3 { font-size: 1.1rem; font-weight: 600; }
+        .stat-numbers {
+            display: flex;
+            justify-content: space-around;
+            margin: 15px 0;
+        }
+        .stat-number {
+            text-align: center;
+        }
+        .stat-number .value { font-size: 1.8rem; font-weight: 800; }
+        .stat-number .label { font-size: 0.7rem; opacity: 0.7; }
         .success-rate { color: #27ae60; }
         .fail-rate { color: #e74c3c; }
         .neutral-rate { color: #667eea; }
@@ -485,6 +501,14 @@
         let currentShareId = null;
         let progressInterval = null;
         
+        // Track tool performance data
+        let toolPerformance = {
+            removebg: { success: 0, failed: 0, total: 0 },
+            fbshare: { success: 0, failed: 0, total: 0 },
+            mediadownloader: { success: 0, failed: 0, total: 0 },
+            fbcover: { success: 0, failed: 0, total: 0 }
+        };
+        
         document.querySelectorAll('.menu-item').forEach(item => {
             item.addEventListener('click', () => {
                 const tool = item.dataset.tool;
@@ -517,6 +541,30 @@
             }
         }
 
+        // Update tool performance (called after each tool action)
+        function updateToolPerformance(toolName, success, failed) {
+            if (!toolPerformance[toolName]) {
+                toolPerformance[toolName] = { success: 0, failed: 0, total: 0 };
+            }
+            toolPerformance[toolName].success += success;
+            toolPerformance[toolName].failed += failed;
+            toolPerformance[toolName].total += (success + failed);
+            // Save to localStorage for persistence
+            localStorage.setItem('toolPerformance', JSON.stringify(toolPerformance));
+        }
+        
+        // Load saved performance data
+        function loadToolPerformance() {
+            const saved = localStorage.getItem('toolPerformance');
+            if (saved) {
+                try {
+                    toolPerformance = JSON.parse(saved);
+                } catch(e) {}
+            }
+        }
+        
+        loadToolPerformance();
+
         async function loadDashboard() {
             try {
                 const statsRes = await fetch('/api/stats');
@@ -524,37 +572,94 @@
                 const stats = statsData.stats || { visits: 0, toolUsage: {}, shareStats: { totalShares: 0, totalSuccess: 0, totalFailed: 0, successRate: 0 } };
                 const shareStats = stats.shareStats || {};
                 
-                // Calculate success rates for each tool (simulated based on usage)
-                const totalUsage = (stats.toolUsage?.removebg || 0) + (stats.toolUsage?.fbshare || 0) + (stats.toolUsage?.mediadownloader || 0) + (stats.toolUsage?.fbcover || 0);
-                const removeBgRate = totalUsage > 0 ? Math.round(((stats.toolUsage?.removebg || 0) / totalUsage) * 100) : 0;
-                const fbShareRate = totalUsage > 0 ? Math.round(((stats.toolUsage?.fbshare || 0) / totalUsage) * 100) : 0;
-                const mediaRate = totalUsage > 0 ? Math.round(((stats.toolUsage?.mediadownloader || 0) / totalUsage) * 100) : 0;
-                const coverRate = totalUsage > 0 ? Math.round(((stats.toolUsage?.fbcover || 0) / totalUsage) * 100) : 0;
+                // Calculate success rates for each tool from stored performance
+                const removeBgRate = toolPerformance.removebg.total > 0 ? Math.round((toolPerformance.removebg.success / toolPerformance.removebg.total) * 100) : 0;
+                const fbShareRate = toolPerformance.fbshare.total > 0 ? Math.round((toolPerformance.fbshare.success / toolPerformance.fbshare.total) * 100) : (shareStats.successRate || 0);
+                const mediaRate = toolPerformance.mediadownloader.total > 0 ? Math.round((toolPerformance.mediadownloader.success / toolPerformance.mediadownloader.total) * 100) : 0;
+                const coverRate = toolPerformance.fbcover.total > 0 ? Math.round((toolPerformance.fbcover.success / toolPerformance.fbcover.total) * 100) : 0;
                 
                 document.getElementById('mainContent').innerHTML = `
                     <div class="card">
                         <h2><i class="fas fa-chart-line"></i> Performance Dashboard</h2>
-                        <p>Real-time analytics across all tools</p>
+                        <p>Real-time analytics and success rates for all tools</p>
                     </div>
                     <div class="stats-grid">
-                        <div class="stat-card"><i class="fas fa-eye neutral-rate"></i><h3>${stats.visits || 0}</h3><p>Total Visits</p></div>
-                        <div class="stat-card"><i class="fas fa-magic success-rate"></i><h3>${stats.toolUsage?.removebg || 0}</h3><p>Background Removals</p><div class="progress-bar"><div class="progress-fill" style="width: ${removeBgRate}%; background:#27ae60;"></div></div><small>${removeBgRate}% of usage</small></div>
-                        <div class="stat-card"><i class="fas fa-share-alt success-rate"></i><h3>${stats.toolUsage?.fbshare || 0}</h3><p>Share Campaigns</p><div class="progress-bar"><div class="progress-fill" style="width: ${fbShareRate}%; background:#27ae60;"></div></div><small>${fbShareRate}% of usage</small></div>
-                        <div class="stat-card"><i class="fas fa-download success-rate"></i><h3>${stats.toolUsage?.mediadownloader || 0}</h3><p>Media Downloads</p><div class="progress-bar"><div class="progress-fill" style="width: ${mediaRate}%; background:#27ae60;"></div></div><small>${mediaRate}% of usage</small></div>
-                        <div class="stat-card"><i class="fas fa-image success-rate"></i><h3>${stats.toolUsage?.fbcover || 0}</h3><p>Covers Generated</p><div class="progress-bar"><div class="progress-fill" style="width: ${coverRate}%; background:#27ae60;"></div></div><small>${coverRate}% of usage</small></div>
+                        <!-- Remove Background Tool -->
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <i class="fas fa-magic" style="color: #667eea;"></i>
+                                <h3>Remove Background</h3>
+                            </div>
+                            <div class="stat-numbers">
+                                <div class="stat-number"><span class="value success-rate">${toolPerformance.removebg.success}</span><div class="label">Successful</div></div>
+                                <div class="stat-number"><span class="value fail-rate">${toolPerformance.removebg.failed}</span><div class="label">Failed</div></div>
+                                <div class="stat-number"><span class="value neutral-rate">${toolPerformance.removebg.total}</span><div class="label">Total</div></div>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${removeBgRate}%; background: #27ae60;"></div></div>
+                            <p style="text-align:center; margin-top:10px;"><strong>Success Rate: ${removeBgRate}%</strong></p>
+                            <small style="display:block; text-align:center; opacity:0.7;">${stats.toolUsage?.removebg || 0} total uses</small>
+                        </div>
+                        
+                        <!-- Facebook Share Tool -->
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <i class="fas fa-share-alt" style="color: #1877F2;"></i>
+                                <h3>Facebook Share</h3>
+                            </div>
+                            <div class="stat-numbers">
+                                <div class="stat-number"><span class="value success-rate">${toolPerformance.fbshare.success || shareStats.totalSuccess}</span><div class="label">Successful</div></div>
+                                <div class="stat-number"><span class="value fail-rate">${toolPerformance.fbshare.failed || shareStats.totalFailed}</span><div class="label">Failed</div></div>
+                                <div class="stat-number"><span class="value neutral-rate">${toolPerformance.fbshare.total || (shareStats.totalSuccess + shareStats.totalFailed)}</span><div class="label">Total</div></div>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${fbShareRate}%; background: #27ae60;"></div></div>
+                            <p style="text-align:center; margin-top:10px;"><strong>Success Rate: ${fbShareRate}%</strong></p>
+                            <small style="display:block; text-align:center; opacity:0.7;">${stats.toolUsage?.fbshare || 0} campaigns run</small>
+                        </div>
+                        
+                        <!-- Media Downloader Tool -->
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <i class="fas fa-download" style="color: #e4405f;"></i>
+                                <h3>Media Downloader</h3>
+                            </div>
+                            <div class="stat-numbers">
+                                <div class="stat-number"><span class="value success-rate">${toolPerformance.mediadownloader.success}</span><div class="label">Successful</div></div>
+                                <div class="stat-number"><span class="value fail-rate">${toolPerformance.mediadownloader.failed}</span><div class="label">Failed</div></div>
+                                <div class="stat-number"><span class="value neutral-rate">${toolPerformance.mediadownloader.total}</span><div class="label">Total</div></div>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${mediaRate}%; background: #27ae60;"></div></div>
+                            <p style="text-align:center; margin-top:10px;"><strong>Success Rate: ${mediaRate}%</strong></p>
+                            <small style="display:block; text-align:center; opacity:0.7;">${stats.toolUsage?.mediadownloader || 0} downloads</small>
+                        </div>
+                        
+                        <!-- FB Cover Maker Tool -->
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <i class="fas fa-image" style="color: #9b59b6;"></i>
+                                <h3>FB Cover Maker</h3>
+                            </div>
+                            <div class="stat-numbers">
+                                <div class="stat-number"><span class="value success-rate">${toolPerformance.fbcover.success}</span><div class="label">Successful</div></div>
+                                <div class="stat-number"><span class="value fail-rate">${toolPerformance.fbcover.failed}</span><div class="label">Failed</div></div>
+                                <div class="stat-number"><span class="value neutral-rate">${toolPerformance.fbcover.total}</span><div class="label">Total</div></div>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${coverRate}%; background: #27ae60;"></div></div>
+                            <p style="text-align:center; margin-top:10px;"><strong>Success Rate: ${coverRate}%</strong></p>
+                            <small style="display:block; text-align:center; opacity:0.7;">${stats.toolUsage?.fbcover || 0} covers generated</small>
+                        </div>
                     </div>
+                    
                     <div class="card">
-                        <h3><i class="fas fa-chart-pie"></i> Facebook Share Performance</h3>
-                        <div class="stats-grid">
-                            <div class="stat-card success-rate"><i class="fas fa-check-circle"></i><h3>${shareStats.totalSuccess || 0}</h3><p>Successful Shares</p></div>
-                            <div class="stat-card fail-rate"><i class="fas fa-times-circle"></i><h3>${shareStats.totalFailed || 0}</h3><p>Failed Shares</p></div>
-                        </div>
+                        <h3><i class="fas fa-chart-pie"></i> Overall Performance</h3>
                         <div class="chart-container">
-                            <canvas id="successRateChart"></canvas>
+                            <canvas id="overallChart"></canvas>
                         </div>
-                        <div class="progress-bar" style="margin-top:20px;"><div class="progress-fill" style="width: ${shareStats.successRate || 0}%;"></div></div>
-                        <p style="text-align:center; margin-top:10px;"><strong>Share Success Rate: ${shareStats.successRate || 0}%</strong></p>
+                        <div style="display: flex; justify-content: center; gap: 30px; margin-top: 20px;">
+                            <div><span style="color: #27ae60;">●</span> Success: ${toolPerformance.removebg.success + toolPerformance.fbshare.success + toolPerformance.mediadownloader.success + toolPerformance.fbcover.success}</div>
+                            <div><span style="color: #e74c3c;">●</span> Failed: ${toolPerformance.removebg.failed + toolPerformance.fbshare.failed + toolPerformance.mediadownloader.failed + toolPerformance.fbcover.failed}</div>
+                        </div>
                     </div>
+                    
                     <div class="card">
                         <h3><i class="fas fa-rocket"></i> Quick Access Tools</h3>
                         <div class="platforms">
@@ -566,17 +671,34 @@
                     </div>
                 `;
                 
+                // Create overall chart
                 if (statsChart) statsChart.destroy();
-                const ctx = document.getElementById('successRateChart').getContext('2d');
+                const ctx = document.getElementById('overallChart').getContext('2d');
+                const totalSuccess = toolPerformance.removebg.success + toolPerformance.fbshare.success + toolPerformance.mediadownloader.success + toolPerformance.fbcover.success;
+                const totalFailed = toolPerformance.removebg.failed + toolPerformance.fbshare.failed + toolPerformance.mediadownloader.failed + toolPerformance.fbcover.failed;
                 statsChart = new Chart(ctx, {
                     type: 'doughnut',
-                    data: { labels: ['Success', 'Failed'], datasets: [{ data: [shareStats.successRate || 0, 100 - (shareStats.successRate || 0)], backgroundColor: ['#27ae60', '#e74c3c'], borderWidth: 0 }] },
-                    options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
+                    data: { 
+                        labels: ['Success', 'Failed'], 
+                        datasets: [{ 
+                            data: [totalSuccess, totalFailed], 
+                            backgroundColor: ['#27ae60', '#e74c3c'], 
+                            borderWidth: 0 
+                        }] 
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: true, 
+                        plugins: { 
+                            legend: { position: 'bottom' },
+                            tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw} (${Math.round((ctx.raw / (totalSuccess + totalFailed)) * 100)}%)` } }
+                        } 
+                    }
                 });
             } catch(e) { console.error(e); }
         }
 
-        // Updated Remove BG with Drag & Drop
+        // Updated Remove BG with Drag & Drop and performance tracking
         function getRemoveBGHTML() {
             return `<div class="card"><h2><i class="fas fa-magic"></i> Remove Background</h2><p>Upload or drag & drop an image to remove its background instantly with AI</p></div>
             <div class="input-section">
@@ -623,13 +745,20 @@
                     const res = await fetch('/api/removebg', { method: 'POST', body: formData });
                     const data = await res.json();
                     if (data.success) {
+                        updateToolPerformance('removebg', 1, 0);
                         document.getElementById('removeBgResult').innerHTML = `<div class="result-header"><i class="fas fa-check-circle"></i><h3>Success!</h3></div><div class="media-card"><div class="media-info"><div class="media-title">Background Removed Image</div></div><a href="${data.url}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a></div><img src="${data.url}" style="max-width:100%; border-radius:16px; margin-top:15px;">`;
-                    } else { throw new Error(data.error); }
-                } catch(e) { document.getElementById('removeBgResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`; }
+                    } else { 
+                        updateToolPerformance('removebg', 0, 1);
+                        throw new Error(data.error); 
+                    }
+                } catch(e) { 
+                    updateToolPerformance('removebg', 0, 1);
+                    document.getElementById('removeBgResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`; 
+                }
             }
         }
 
-        // Updated FB Share with Live Progress
+        // Updated FB Share with Live Progress and performance tracking
         function getFBShareHTML() {
             return `<div class="card"><h2><i class="fas fa-share-alt"></i> Facebook Share Tool</h2><p>Auto-share posts to Facebook (up to 5000 shares). Live progress tracking included.</p></div>
             <div class="input-section"><div class="input-group" style="flex-direction:column; gap:12px;"><textarea id="fbCookie" rows="3" placeholder="Facebook cookie (entire cookie string)..." style="resize:vertical;"></textarea><input type="text" id="fbLink" placeholder="Post URL to share..."><input type="number" id="fbLimit" placeholder="Number of shares (max 5000)" max="5000"><button id="fbShareBtn"><i class="fas fa-share"></i> Start Sharing</button></div></div>
@@ -709,13 +838,23 @@
                         document.getElementById('progressSuccess').innerText = success;
                         document.getElementById('progressFailed').innerText = failed;
                         
-                        if (data.share.status === 'completed' || data.share.status === 'failed' || data.share.status === 'cancelled') {
+                        if (data.share.status === 'completed') {
+                            updateToolPerformance('fbshare', success, failed);
                             clearInterval(progressInterval);
                             setTimeout(() => {
                                 document.getElementById('liveProgress').classList.remove('show');
                                 loadShareHistory();
                                 loadDashboard();
                             }, 3000);
+                        } else if (data.share.status === 'failed') {
+                            updateToolPerformance('fbshare', success, failed);
+                            clearInterval(progressInterval);
+                            setTimeout(() => {
+                                document.getElementById('liveProgress').classList.remove('show');
+                            }, 3000);
+                        } else if (data.share.status === 'cancelled') {
+                            clearInterval(progressInterval);
+                            document.getElementById('liveProgress').classList.remove('show');
                         }
                     }
                 } catch(e) { console.error(e); }
@@ -731,6 +870,7 @@
             } catch(e) { console.error(e); }
         }
 
+        // Media Downloader with performance tracking
         function getMediaDownloaderHTML() {
             return `<div class="card"><h2><i class="fas fa-download"></i> Media Downloader</h2><p>Download videos & audio from TikTok, Instagram, YouTube, Spotify, Facebook, SoundCloud</p></div>
             <div class="platforms" id="downloadPlatforms"></div>
@@ -759,9 +899,17 @@
                 try {
                     const res = await fetch('/api/download-media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platform: selectedPlatform, url }) });
                     const data = await res.json();
-                    if (data.success) { displayDownloadResult(data.data, selectedPlatform); }
-                    else { throw new Error(data.error); }
-                } catch(e) { document.getElementById('downloadResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`; }
+                    if (data.success) { 
+                        updateToolPerformance('mediadownloader', 1, 0);
+                        displayDownloadResult(data.data, selectedPlatform); 
+                    } else { 
+                        updateToolPerformance('mediadownloader', 0, 1);
+                        throw new Error(data.error); 
+                    }
+                } catch(e) { 
+                    updateToolPerformance('mediadownloader', 0, 1);
+                    document.getElementById('downloadResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`; 
+                }
                 finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> Fetch Media'; }
             };
         }
@@ -785,6 +933,7 @@
             document.getElementById('downloadResult').innerHTML = html + '</div>';
         }
 
+        // FB Cover Maker with performance tracking
         function getFBCoverHTML() {
             return `<div class="card"><h2><i class="fas fa-image"></i> Facebook Cover Maker</h2><p>Generate a custom Facebook cover banner with your personal information</p></div>
             <div class="input-section"><div class="input-group" style="flex-direction:column; gap:12px;"><input type="text" id="coverName" placeholder="Your Name"><input type="text" id="coverSubname" placeholder="Subtitle / Tagline"><input type="text" id="coverAddress" placeholder="Address / Location"><input type="email" id="coverEmail" placeholder="Email Address"><input type="text" id="coverPhone" placeholder="Phone Number"><input type="text" id="coverUid" placeholder="Facebook UID *Required" required><select id="coverColor"><option value="red">🔴 Red</option><option value="blue">🔵 Blue</option><option value="green">🟢 Green</option><option value="purple">🟣 Purple</option><option value="orange">🟠 Orange</option><option value="pink">🌸 Pink</option></select><button id="generateCoverBtn"><i class="fas fa-image"></i> Generate Cover</button></div></div>
@@ -795,6 +944,11 @@
             document.getElementById('generateCoverBtn').onclick = async () => {
                 const uid = document.getElementById('coverUid').value.trim();
                 if (!uid) { alert('Facebook UID is required!'); return; }
+                
+                const btn = document.getElementById('generateCoverBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Generating...';
+                
                 const params = new URLSearchParams({
                     name: document.getElementById('coverName').value || 'User',
                     subname: document.getElementById('coverSubname').value || '',
@@ -805,7 +959,22 @@
                     color: document.getElementById('coverColor').value
                 });
                 const coverUrl = `/api/fbcover?${params.toString()}`;
-                document.getElementById('coverResult').innerHTML = `<div class="result-header"><i class="fas fa-check-circle"></i><h3>Cover Generated!</h3></div><div style="text-align:center;"><img src="${coverUrl}" style="max-width:100%; border-radius:16px; margin-bottom:15px; box-shadow:0 10px 30px rgba(0,0,0,0.2);"><div><a href="${coverUrl}" class="download-btn" download="fb_cover_${Date.now()}.png"><i class="fas fa-download"></i> Download Cover</a></div></div>`;
+                
+                // Test if image loads successfully
+                const img = new Image();
+                img.onload = () => {
+                    updateToolPerformance('fbcover', 1, 0);
+                    document.getElementById('coverResult').innerHTML = `<div class="result-header"><i class="fas fa-check-circle"></i><h3>Cover Generated!</h3></div><div style="text-align:center;"><img src="${coverUrl}" style="max-width:100%; border-radius:16px; margin-bottom:15px; box-shadow:0 10px 30px rgba(0,0,0,0.2);"><div><a href="${coverUrl}" class="download-btn" download="fb_cover_${Date.now()}.png"><i class="fas fa-download"></i> Download Cover</a></div></div>`;
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-image"></i> Generate Cover';
+                };
+                img.onerror = () => {
+                    updateToolPerformance('fbcover', 0, 1);
+                    document.getElementById('coverResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>Failed to generate cover. Please check your UID and try again.</p></div>`;
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-image"></i> Generate Cover';
+                };
+                img.src = coverUrl;
             };
         }
 
