@@ -31,6 +31,7 @@ const storageDir = path.join(__dirname, 'storage');
 const uploadsDir = path.join(__dirname, 'public/uploads');
 const historyFile = path.join(storageDir, 'shareHistory.json');
 const counterFile = path.join(storageDir, 'counter.json');
+const performanceFile = path.join(storageDir, 'performance.json');
 
 // Ensure directories exist
 async function ensureDirectories() {
@@ -48,7 +49,9 @@ async function ensureDirectories() {
           removebg: 0,
           fbshare: 0,
           mediadownloader: 0,
-          fbcover: 0
+          fbcover: 0,
+          smsbomber: 0,
+          idtemplates: 0
         }
       }, null, 2));
     }
@@ -58,6 +61,23 @@ async function ensureDirectories() {
       await fs.access(historyFile);
     } catch {
       await fs.writeFile(historyFile, JSON.stringify([], null, 2));
+    }
+    
+    // Initialize performance file if not exists
+    try {
+      await fs.access(performanceFile);
+    } catch {
+      await fs.writeFile(performanceFile, JSON.stringify({
+        tools: {
+          removebg: { success: 0, failed: 0, total: 0 },
+          fbshare: { success: 0, failed: 0, total: 0 },
+          mediadownloader: { success: 0, failed: 0, total: 0 },
+          fbcover: { success: 0, failed: 0, total: 0 },
+          smsbomber: { success: 0, failed: 0, total: 0 },
+          idtemplates: { success: 0, failed: 0, total: 0 }
+        },
+        lastUpdated: new Date().toISOString()
+      }, null, 2));
     }
   } catch (err) {
     console.error('Directory creation error:', err);
@@ -82,12 +102,44 @@ async function updateCounter(toolName = null) {
   }
 }
 
+async function updatePerformance(toolName, success, failed) {
+  try {
+    const data = await fs.readFile(performanceFile, 'utf8');
+    const performance = JSON.parse(data);
+    
+    if (!performance.tools[toolName]) {
+      performance.tools[toolName] = { success: 0, failed: 0, total: 0 };
+    }
+    
+    performance.tools[toolName].success += success;
+    performance.tools[toolName].failed += failed;
+    performance.tools[toolName].total += (success + failed);
+    performance.lastUpdated = new Date().toISOString();
+    
+    await fs.writeFile(performanceFile, JSON.stringify(performance, null, 2));
+    return performance;
+  } catch (err) {
+    console.error('Performance update error:', err);
+    return null;
+  }
+}
+
+async function getPerformance() {
+  try {
+    const data = await fs.readFile(performanceFile, 'utf8');
+    return JSON.parse(data);
+  } catch (err) {
+    return { tools: {}, lastUpdated: new Date().toISOString() };
+  }
+}
+
 async function getStats() {
   try {
     const counterData = await fs.readFile(counterFile, 'utf8');
     const counter = JSON.parse(counterData);
     const historyData = await fs.readFile(historyFile, 'utf8');
     const shareHistory = JSON.parse(historyData);
+    const performance = await getPerformance();
     
     const totalShares = shareHistory.length;
     const totalSuccess = shareHistory.reduce((acc, curr) => acc + (curr.success || 0), 0);
@@ -97,11 +149,12 @@ async function getStats() {
     return {
       visits: counter.visits || 0,
       toolUsage: counter.toolUsage || {},
-      shareStats: { totalShares, totalSuccess, totalFailed, successRate }
+      shareStats: { totalShares, totalSuccess, totalFailed, successRate },
+      performance: performance.tools || {}
     };
   } catch (err) {
     console.error('Stats error:', err);
-    return { visits: 0, toolUsage: {}, shareStats: { totalShares: 0, totalSuccess: 0, totalFailed: 0, successRate: 0 } };
+    return { visits: 0, toolUsage: {}, shareStats: { totalShares: 0, totalSuccess: 0, totalFailed: 0, successRate: 0 }, performance: {} };
   }
 }
 
@@ -161,12 +214,15 @@ app.post('/api/removebg', upload.single('image'), async (req, res) => {
     const response = await axios.get(apiUrl, { timeout: 30000 });
     
     if (response.data?.data?.url) {
+      await updatePerformance('removebg', 1, 0);
       res.json({ success: true, url: response.data.data.url, message: 'Background removed successfully!' });
     } else {
+      await updatePerformance('removebg', 0, 1);
       throw new Error('Invalid response from removal service');
     }
   } catch (error) {
     console.error('Remove BG error:', error.message);
+    await updatePerformance('removebg', 0, 1);
     res.status(500).json({ success: false, error: 'Failed to remove background. Please try again.' });
   }
 });
@@ -215,7 +271,6 @@ async function performShare(postLink, token, cookie, ua, shareId, totalLimit, up
   const results = { success: 0, failed: 0 };
   
   for (let i = 0; i < totalLimit; i++) {
-    // Check if cancelled
     if (activeShares.get(shareId) === 'cancelled') {
       console.log(`Share ${shareId} was cancelled`);
       break;
@@ -247,14 +302,12 @@ async function performShare(postLink, token, cookie, ua, shareId, totalLimit, up
       }
     }
     
-    // Small delay between requests
     await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 500));
   }
   
   return results;
 }
 
-// Save share history to file
 async function saveShareHistory(history) {
   try {
     await fs.writeFile(historyFile, JSON.stringify(history, null, 2));
@@ -263,7 +316,6 @@ async function saveShareHistory(history) {
   }
 }
 
-// Load share history
 async function loadShareHistory() {
   try {
     const data = await fs.readFile(historyFile, 'utf8');
@@ -284,7 +336,6 @@ app.post('/api/share', async (req, res) => {
       return res.status(400).json({ status: false, message: 'Cookie, link, and limit (max 5000) are required.' });
     }
     
-    // Send immediate response with share_id
     res.json({ 
       status: true, 
       message: 'Share started', 
@@ -292,9 +343,7 @@ app.post('/api/share', async (req, res) => {
       total_limit: limitNum
     });
     
-    // Load existing history
     let shareHistory = await loadShareHistory();
-    
     const ua = ua_list[Math.floor(Math.random() * ua_list.length)];
     let token = await extractToken(cookie, ua);
     let successCount = 0;
@@ -302,7 +351,6 @@ app.post('/api/share', async (req, res) => {
     
     const historyEntry = {
       id: shareId,
-      link,
       requested: limitNum,
       success: 0,
       failed: 0,
@@ -316,7 +364,6 @@ app.post('/api/share', async (req, res) => {
     await saveShareHistory(shareHistory);
     activeShares.set(shareId, 'active');
     
-    // Progress update function
     const updateProgress = async (success, failed, progress) => {
       successCount = success;
       failedCount = failed;
@@ -338,7 +385,6 @@ app.post('/api/share', async (req, res) => {
       failedCount = result.failed;
     }
     
-    // Backup API fallback if primary had low success
     if (successCount < limitNum * 0.5 && activeShares.get(shareId) !== 'cancelled') {
       console.log('Using backup API for remaining shares...');
       try {
@@ -354,7 +400,6 @@ app.post('/api/share', async (req, res) => {
       }
     }
     
-    // Finalize history entry
     const finalHistory = await loadShareHistory();
     const finalEntry = finalHistory.find(h => h.id === shareId);
     if (finalEntry) {
@@ -366,12 +411,12 @@ app.post('/api/share', async (req, res) => {
       await saveShareHistory(finalHistory);
     }
     
+    await updatePerformance('fbshare', successCount, failedCount);
     activeShares.delete(shareId);
     
   } catch (error) {
     console.error('Share error:', error);
     activeShares.delete(shareId);
-    // Only send error if headers haven't been sent yet
     if (!res.headersSent) {
       res.status(500).json({ status: false, message: 'Server error. Please try again.' });
     }
@@ -380,7 +425,9 @@ app.post('/api/share', async (req, res) => {
 
 app.get('/api/share/history', async (req, res) => {
   const history = await loadShareHistory();
-  res.json({ status: true, history: history.slice(0, 50) });
+  // Remove link field from response
+  const cleanedHistory = history.slice(0, 50).map(({ link, ...rest }) => rest);
+  res.json({ status: true, history: cleanedHistory });
 });
 
 app.get('/api/share/:id/progress', async (req, res) => {
@@ -423,7 +470,7 @@ app.post('/api/share/:id/cancel', async (req, res) => {
   }
 });
 
-// ========== MEDIA DOWNLOADER WITH UPDATED SPOTIFY API ==========
+// ========== MEDIA DOWNLOADER ==========
 const API_ENDPOINTS = {
   tiktok: (url) => `https://api.zenithapi.qzz.io/tiktok?url=${encodeURIComponent(url)}`,
   instagram: (url) => `https://api-library-kohi.onrender.com/api/alldl?url=${encodeURIComponent(url)}`,
@@ -433,21 +480,16 @@ const API_ENDPOINTS = {
   soundcloud: (url) => `https://jonell.ccprojects.gleeze.com/api/soundcloud?url=${encodeURIComponent(url)}`
 };
 
-// Helper function to handle Spotify response
 async function handleSpotifyResponse(apiUrl) {
   try {
     const response = await axios.get(apiUrl, { timeout: 30000 });
     const data = response.data;
     
-    // Check if the response has the expected Spotify structure
     if (data && data.success === true && data.data) {
       const spotifyData = data.data;
-      
-      // Extract track information
       const trackInfo = spotifyData.track || {};
       const downloadInfo = spotifyData.download || {};
       
-      // Return formatted response for frontend
       return {
         success: true,
         platform: 'spotify',
@@ -463,17 +505,6 @@ async function handleSpotifyResponse(apiUrl) {
           downloadNote: downloadInfo.note || ''
         }
       };
-    } else if (data && data.data && data.data.download) {
-      // Alternative response structure
-      return {
-        success: true,
-        platform: 'spotify',
-        data: {
-          title: data.data.title || data.data.track?.name || 'Spotify Track',
-          artist: data.data.artist || data.data.track?.artists || '',
-          downloadUrl: data.data.download || data.data.download?.url
-        }
-      };
     } else {
       throw new Error('Invalid Spotify API response structure');
     }
@@ -483,7 +514,6 @@ async function handleSpotifyResponse(apiUrl) {
   }
 }
 
-// Generic handler for other platforms
 async function handleGenericResponse(apiUrl) {
   const response = await axios.get(apiUrl, { timeout: 30000 });
   return response.data;
@@ -501,7 +531,6 @@ app.post('/api/download-media', async (req, res) => {
     const apiUrl = API_ENDPOINTS[platform](url);
     let result;
     
-    // Handle Spotify specially due to its unique response structure
     if (platform === 'spotify') {
       result = await handleSpotifyResponse(apiUrl);
     } else {
@@ -513,10 +542,12 @@ app.post('/api/download-media', async (req, res) => {
       };
     }
     
+    await updatePerformance('mediadownloader', 1, 0);
     res.json(result);
     
   } catch (error) {
     console.error('Download error:', error.message);
+    await updatePerformance('mediadownloader', 0, 1);
     res.status(500).json({ 
       success: false, 
       error: 'Failed to fetch media. Please check the URL and try again.' 
@@ -524,7 +555,6 @@ app.post('/api/download-media', async (req, res) => {
   }
 });
 
-// ========== SPOTIFY DOWNLOAD PROXY (Fixes CORS and download issues) ==========
 app.get('/api/spotify-download', async (req, res) => {
   try {
     const { url } = req.query;
@@ -535,7 +565,6 @@ app.get('/api/spotify-download', async (req, res) => {
     
     console.log('Proxying Spotify download from:', url.substring(0, 100) + '...');
     
-    // Fetch the audio file from the temporary Spotify download URL
     const response = await axios({
       method: 'GET',
       url: url,
@@ -552,14 +581,12 @@ app.get('/api/spotify-download', async (req, res) => {
       maxRedirects: 5
     });
     
-    // Set appropriate headers for audio download
     res.setHeader('Content-Type', 'audio/mpeg');
     res.setHeader('Content-Disposition', 'attachment; filename="spotify_track.mp3"');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
     
-    // Pipe the audio stream to the response
     response.data.pipe(res);
     
   } catch (error) {
@@ -568,6 +595,87 @@ app.get('/api/spotify-download', async (req, res) => {
       success: false, 
       error: 'Failed to download audio file. The link may have expired or the service is unavailable.' 
     });
+  }
+});
+
+// ========== SMS BOMBER ==========
+const SMS_API_KEY = '66ec8aa6ce70b55c877c4489fa545c67fee8633a42442343771bd2ade432ecbd';
+const SMS_API_URL = 'https://oreo.gleeze.com/api/smsbomber';
+
+app.post('/api/smsbomb', async (req, res) => {
+  try {
+    await updateCounter('smsbomber');
+    const { phone, amount } = req.body;
+    
+    if (!phone) {
+      return res.status(400).json({ success: false, error: 'Phone number is required' });
+    }
+    
+    let amountNum = parseInt(amount);
+    if (isNaN(amountNum) || amountNum < 1) {
+      amountNum = 1;
+    }
+    if (amountNum > 50) {
+      amountNum = 50;
+    }
+    
+    // Clean phone number (remove spaces, ensure format)
+    let cleanPhone = phone.replace(/\s/g, '');
+    if (!cleanPhone.startsWith('+')) {
+      cleanPhone = '+' + cleanPhone;
+    }
+    
+    const apiUrl = `${SMS_API_URL}?phone=${encodeURIComponent(cleanPhone)}&amount=${amountNum}&api_key=${SMS_API_KEY}`;
+    
+    const response = await axios.get(apiUrl, { timeout: 30000 });
+    
+    if (response.data && response.data.success === true) {
+      await updatePerformance('smsbomber', 1, 0);
+      res.json({
+        success: true,
+        message: response.data.message || `SMS bombing started for ${cleanPhone}`,
+        phone: cleanPhone,
+        amount: amountNum,
+        instant: response.data.instant || true
+      });
+    } else {
+      await updatePerformance('smsbomber', 0, 1);
+      throw new Error(response.data?.message || 'SMS bombing failed');
+    }
+    
+  } catch (error) {
+    console.error('SMS Bomber error:', error.message);
+    await updatePerformance('smsbomber', 0, 1);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to start SMS bombing. Please try again.' 
+    });
+  }
+});
+
+// ========== ID TEMPLATES ==========
+const ID_TEMPLATES = {
+  national: {
+    name: 'National ID',
+    front: 'https://iili.io/CdCmXLP.jpg',
+    back: 'https://iili.io/CdCyaHb.jpg'
+  },
+  philhealth: {
+    name: 'PhilHealth ID',
+    front: 'https://iili.io/Cdn9BqP.jpg',
+    back: 'https://iili.io/Cdn9jBS.jpg'
+  }
+};
+
+app.get('/api/id-templates', async (req, res) => {
+  try {
+    await updateCounter('idtemplates');
+    await updatePerformance('idtemplates', 1, 0);
+    res.json({ success: true, templates: ID_TEMPLATES });
+  } catch (error) {
+    console.error('ID Templates error:', error.message);
+    await updatePerformance('idtemplates', 0, 1);
+    res.status(500).json({ success: false, error: 'Failed to fetch ID templates' });
   }
 });
 
@@ -584,11 +692,13 @@ app.get('/api/fbcover', async (req, res) => {
     const coverUrl = `https://hiroshi-api.onrender.com/canvas/fbcoverv2?name=${encodeURIComponent(name || 'User')}&color=${encodeURIComponent(color || 'blue')}&address=${encodeURIComponent(address || '')}&email=${encodeURIComponent(email || '')}&subname=${encodeURIComponent(subname || '')}&sdt=${encodeURIComponent(sdt || '')}&uid=${encodeURIComponent(uid)}`;
     
     const response = await axios.get(coverUrl, { responseType: 'arraybuffer', timeout: 30000 });
+    await updatePerformance('fbcover', 1, 0);
     res.set('Content-Type', 'image/png');
     res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.send(response.data);
   } catch (error) {
     console.error('Cover maker error:', error.message);
+    await updatePerformance('fbcover', 0, 1);
     res.status(500).json({ success: false, error: 'Failed to generate cover image.' });
   }
 });
@@ -624,10 +734,10 @@ app.listen(PORT, () => {
   console.log(`📁 Storage directory: ${storageDir}`);
   console.log(`📁 Uploads directory: ${uploadsDir}`);
   console.log(`📁 History file: ${historyFile}`);
+  console.log(`📁 Performance file: ${performanceFile}`);
   console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
-// Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, saving data and closing...');
   await cleanupOldFiles();
