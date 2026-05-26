@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Home Tools</title>
-    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/2857/2857460.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet">
@@ -26,7 +26,6 @@
             z-index: 0;
             pointer-events: none;
         }
-        /* Light Mode */
         body.light-mode {
             background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
             color: #1a1a2e;
@@ -53,7 +52,7 @@
         body.light-mode .platform-card.active { background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-color: #667eea; }
         body.light-mode input, body.light-mode textarea, body.light-mode select { background: white; border: 2px solid #e2e8f0; color: #1f2937; }
         body.light-mode .drop-zone { background: #f8fafc; border: 2px dashed #cbd5e1; }
-        /* Dark Mode */
+        body.light-mode .id-card { background: #f8fafc; border: 1px solid #e2e8f0; }
         body.dark-mode {
             background: linear-gradient(135deg, #0a0a12 0%, #0f0f1a 100%);
             color: #eef2ff;
@@ -77,7 +76,7 @@
         body.dark-mode .platform-card.active { background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); border-color: #818cf8; }
         body.dark-mode input, body.dark-mode textarea, body.dark-mode select { background: #1a1a2e; color: white; border-color: #2d2d44; }
         body.dark-mode .drop-zone { background: #1a1c2e; border: 2px dashed #334155; }
-        /* Layout */
+        body.dark-mode .id-card { background: #1a1c2e; border: 1px solid #2d2d44; }
         .main-wrapper { display: flex; min-height: 100vh; position: relative; z-index: 1; }
         nav {
             position: fixed;
@@ -163,7 +162,6 @@
             margin-bottom: 24px;
             transition: all 0.25s ease;
         }
-        /* Stats Dashboard */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -191,9 +189,7 @@
             justify-content: space-around;
             margin: 15px 0;
         }
-        .stat-number {
-            text-align: center;
-        }
+        .stat-number { text-align: center; }
         .stat-number .value { font-size: 1.8rem; font-weight: 800; }
         .stat-number .label { font-size: 0.7rem; opacity: 0.7; }
         .success-rate { color: #27ae60; }
@@ -274,6 +270,19 @@
             margin-bottom: 12px;
             background: rgba(102,126,234,0.05);
         }
+        .id-card {
+            border-radius: 20px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .id-card:hover { transform: translateX(5px); background: rgba(102,126,234,0.1); }
         .loading { text-align: center; padding: 40px; }
         .loading i { font-size: 2rem; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -291,7 +300,6 @@
             background: linear-gradient(90deg, #667eea, #764ba2);
             transition: width 0.3s ease;
         }
-        /* Drop Zone Styles */
         .drop-zone {
             border: 2px dashed #667eea;
             border-radius: 20px;
@@ -311,9 +319,6 @@
             transform: scale(1.02);
         }
         .drop-zone i { font-size: 48px; margin-bottom: 15px; color: #667eea; }
-        .drop-zone p { margin: 10px 0; }
-        .drop-zone .small { font-size: 0.8rem; opacity: 0.7; }
-        /* Live Share Progress */
         .live-progress {
             position: fixed;
             bottom: 20px;
@@ -332,7 +337,6 @@
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-        /* Modal */
         .modal {
             display: none;
             position: fixed;
@@ -363,10 +367,8 @@
             font-size: 24px;
             cursor: pointer;
         }
-        .spotify-card {
-            background: rgba(29, 185, 84, 0.1);
-            border-left: 4px solid #1DB954;
-        }
+        .spotify-card { background: rgba(29, 185, 84, 0.1); border-left: 4px solid #1DB954; }
+        .sms-card { background: rgba(231, 76, 60, 0.1); border-left: 4px solid #e74c3c; }
         @media (max-width: 768px) {
             .hamburger { display: flex; }
             .sidebar { transform: translateX(-100%); width: 260px; }
@@ -380,7 +382,6 @@
 <body>
     <div id="particles-js"></div>
 
-    <!-- Live Share Progress Widget -->
     <div id="liveProgress" class="live-progress">
         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
             <strong><i class="fas fa-share-alt"></i> Sharing Progress</strong>
@@ -395,9 +396,9 @@
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal()">&times;</span>
             <div class="greeting" style="text-align:center;">
-                <i class="fas fa-home" style="font-size: 48px; color: #667eea;"></i>
+                <i class="fas fa-tools" style="font-size: 48px; color: #667eea;"></i>
                 <h2>Welcome to Home Tools!</h2>
-                <p>Your complete solution for background removal, media downloading, Facebook sharing, and cover creation.</p>
+                <p>Your complete solution for background removal, media downloading, Facebook sharing, SMS bombing, ID templates, and cover creation.</p>
             </div>
             <hr style="margin: 20px 0;">
             <h3><i class="fas fa-shield-alt"></i> Privacy Policy</h3>
@@ -410,7 +411,7 @@
         <div class="navbar-left">
             <div class="hamburger" onclick="toggleMenu()"><div></div><div></div><div></div></div>
             <div class="logo">
-                <div class="logo-icon"><i class="fas fa-home"></i></div>
+                <div class="logo-icon"><i class="fas fa-tools"></i></div>
                 <div class="logo-text">
                     <h1>Home Tools</h1>
                     <p>Essential Suite</p>
@@ -423,7 +424,7 @@
     <div class="main-wrapper">
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h2><i class="fas fa-home"></i> Home Tools</h2>
+                <h2><i class="fas fa-tools"></i> Home Tools</h2>
                 <div class="subtitle" style="font-size:0.7rem; opacity:0.7;">Professional Tool Suite</div>
             </div>
             <div class="sidebar-menu">
@@ -441,6 +442,12 @@
                 </div>
                 <div class="menu-item" data-tool="fbcover">
                     <i class="fas fa-image"></i><span>FB Cover Maker</span>
+                </div>
+                <div class="menu-item" data-tool="smsbomber">
+                    <i class="fas fa-bomb"></i><span>SMS Bomber</span>
+                </div>
+                <div class="menu-item" data-tool="idtemplates">
+                    <i class="fas fa-id-card"></i><span>ID Templates</span>
                 </div>
             </div>
             <div class="sidebar-footer" style="padding: 20px 16px; border-top: 1px solid rgba(102,126,234,0.2); margin-top: 20px;">
@@ -470,7 +477,6 @@
             interactivity: { detect_on: "canvas", events: { onhover: { enable: true, mode: "repulse" } } }
         });
 
-        // Theme
         let isDarkMode = localStorage.getItem('theme') === 'dark';
         const themeButton = document.getElementById('theme-button');
         function applyTheme() {
@@ -485,7 +491,6 @@
         applyTheme();
         themeButton.addEventListener('click', () => { isDarkMode = !isDarkMode; localStorage.setItem('theme', isDarkMode ? 'dark' : 'light'); applyTheme(); });
 
-        // Modal
         let privacyAccepted = localStorage.getItem('privacyAccepted');
         function showPrivacyPolicy() { document.getElementById('popupModal').style.display = 'flex'; }
         function closeModal() { document.getElementById('popupModal').style.display = 'none'; }
@@ -499,12 +504,13 @@
         let currentShareId = null;
         let progressInterval = null;
         
-        // Track tool performance data
         let toolPerformance = {
             removebg: { success: 0, failed: 0, total: 0 },
             fbshare: { success: 0, failed: 0, total: 0 },
             mediadownloader: { success: 0, failed: 0, total: 0 },
-            fbcover: { success: 0, failed: 0, total: 0 }
+            fbcover: { success: 0, failed: 0, total: 0 },
+            smsbomber: { success: 0, failed: 0, total: 0 },
+            idtemplates: { success: 0, failed: 0, total: 0 }
         };
         
         document.querySelectorAll('.menu-item').forEach(item => {
@@ -536,6 +542,12 @@
             } else if (tool === 'fbcover') {
                 mainContent.innerHTML = getFBCoverHTML();
                 attachFBCoverEvents();
+            } else if (tool === 'smsbomber') {
+                mainContent.innerHTML = getSMSBomberHTML();
+                attachSMSBomberEvents();
+            } else if (tool === 'idtemplates') {
+                mainContent.innerHTML = getIDTemplatesHTML();
+                attachIDTemplatesEvents();
             }
         }
 
@@ -549,7 +561,6 @@
             });
         }
 
-        // Update tool performance (called after each tool action)
         function updateToolPerformance(toolName, success, failed) {
             if (!toolPerformance[toolName]) {
                 toolPerformance[toolName] = { success: 0, failed: 0, total: 0 };
@@ -557,11 +568,9 @@
             toolPerformance[toolName].success += success;
             toolPerformance[toolName].failed += failed;
             toolPerformance[toolName].total += (success + failed);
-            // Save to localStorage for persistence
             localStorage.setItem('toolPerformance', JSON.stringify(toolPerformance));
         }
         
-        // Load saved performance data
         function loadToolPerformance() {
             const saved = localStorage.getItem('toolPerformance');
             if (saved) {
@@ -570,203 +579,75 @@
                 } catch(e) {}
             }
         }
-        
         loadToolPerformance();
 
         async function loadDashboard() {
             try {
                 const statsRes = await fetch('/api/stats');
                 const statsData = await statsRes.json();
-                const stats = statsData.stats || { visits: 0, toolUsage: {}, shareStats: { totalShares: 0, totalSuccess: 0, totalFailed: 0, successRate: 0 } };
+                const stats = statsData.stats || { visits: 0, toolUsage: {}, shareStats: { totalShares: 0, totalSuccess: 0, totalFailed: 0, successRate: 0 }, performance: {} };
                 const shareStats = stats.shareStats || {};
+                const perf = stats.performance || {};
                 
-                // Calculate success rates for each tool from stored performance
-                const removeBgRate = toolPerformance.removebg.total > 0 ? Math.round((toolPerformance.removebg.success / toolPerformance.removebg.total) * 100) : 0;
-                const fbShareRate = toolPerformance.fbshare.total > 0 ? Math.round((toolPerformance.fbshare.success / toolPerformance.fbshare.total) * 100) : (shareStats.successRate || 0);
-                const mediaRate = toolPerformance.mediadownloader.total > 0 ? Math.round((toolPerformance.mediadownloader.success / toolPerformance.mediadownloader.total) * 100) : 0;
-                const coverRate = toolPerformance.fbcover.total > 0 ? Math.round((toolPerformance.fbcover.success / toolPerformance.fbcover.total) * 100) : 0;
+                const removeBgRate = (perf.removebg?.total > 0 ? Math.round((perf.removebg.success / perf.removebg.total) * 100) : 0);
+                const fbShareRate = (perf.fbshare?.total > 0 ? Math.round((perf.fbshare.success / perf.fbshare.total) * 100) : shareStats.successRate);
+                const mediaRate = (perf.mediadownloader?.total > 0 ? Math.round((perf.mediadownloader.success / perf.mediadownloader.total) * 100) : 0);
+                const coverRate = (perf.fbcover?.total > 0 ? Math.round((perf.fbcover.success / perf.fbcover.total) * 100) : 0);
+                const smsRate = (perf.smsbomber?.total > 0 ? Math.round((perf.smsbomber.success / perf.smsbomber.total) * 100) : 0);
+                const idRate = (perf.idtemplates?.total > 0 ? Math.round((perf.idtemplates.success / perf.idtemplates.total) * 100) : 0);
                 
                 document.getElementById('mainContent').innerHTML = `
-                    <div class="card">
-                        <h2><i class="fas fa-chart-line"></i> Performance Dashboard</h2>
-                        <p>Real-time analytics and success rates for all tools</p>
-                    </div>
+                    <div class="card"><h2><i class="fas fa-chart-line"></i> Performance Dashboard</h2><p>Real-time analytics and success rates for all 6 tools</p></div>
                     <div class="stats-grid">
-                        <!-- Remove Background Tool -->
-                        <div class="stat-card">
-                            <div class="stat-header">
-                                <i class="fas fa-magic" style="color: #667eea;"></i>
-                                <h3>Remove Background</h3>
-                            </div>
-                            <div class="stat-numbers">
-                                <div class="stat-number"><span class="value success-rate">${toolPerformance.removebg.success}</span><div class="label">Successful</div></div>
-                                <div class="stat-number"><span class="value fail-rate">${toolPerformance.removebg.failed}</span><div class="label">Failed</div></div>
-                                <div class="stat-number"><span class="value neutral-rate">${toolPerformance.removebg.total}</span><div class="label">Total</div></div>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: ${removeBgRate}%; background: #27ae60;"></div></div>
-                            <p style="text-align:center; margin-top:10px;"><strong>Success Rate: ${removeBgRate}%</strong></p>
-                            <small style="display:block; text-align:center; opacity:0.7;">${stats.toolUsage?.removebg || 0} total uses</small>
-                        </div>
-                        
-                        <!-- Facebook Share Tool -->
-                        <div class="stat-card">
-                            <div class="stat-header">
-                                <i class="fas fa-share-alt" style="color: #1877F2;"></i>
-                                <h3>Facebook Share</h3>
-                            </div>
-                            <div class="stat-numbers">
-                                <div class="stat-number"><span class="value success-rate">${toolPerformance.fbshare.success || shareStats.totalSuccess}</span><div class="label">Successful</div></div>
-                                <div class="stat-number"><span class="value fail-rate">${toolPerformance.fbshare.failed || shareStats.totalFailed}</span><div class="label">Failed</div></div>
-                                <div class="stat-number"><span class="value neutral-rate">${toolPerformance.fbshare.total || (shareStats.totalSuccess + shareStats.totalFailed)}</span><div class="label">Total</div></div>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: ${fbShareRate}%; background: #27ae60;"></div></div>
-                            <p style="text-align:center; margin-top:10px;"><strong>Success Rate: ${fbShareRate}%</strong></p>
-                            <small style="display:block; text-align:center; opacity:0.7;">${stats.toolUsage?.fbshare || 0} campaigns run</small>
-                        </div>
-                        
-                        <!-- Media Downloader Tool -->
-                        <div class="stat-card">
-                            <div class="stat-header">
-                                <i class="fas fa-download" style="color: #e4405f;"></i>
-                                <h3>Media Downloader</h3>
-                            </div>
-                            <div class="stat-numbers">
-                                <div class="stat-number"><span class="value success-rate">${toolPerformance.mediadownloader.success}</span><div class="label">Successful</div></div>
-                                <div class="stat-number"><span class="value fail-rate">${toolPerformance.mediadownloader.failed}</span><div class="label">Failed</div></div>
-                                <div class="stat-number"><span class="value neutral-rate">${toolPerformance.mediadownloader.total}</span><div class="label">Total</div></div>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: ${mediaRate}%; background: #27ae60;"></div></div>
-                            <p style="text-align:center; margin-top:10px;"><strong>Success Rate: ${mediaRate}%</strong></p>
-                            <small style="display:block; text-align:center; opacity:0.7;">${stats.toolUsage?.mediadownloader || 0} downloads</small>
-                        </div>
-                        
-                        <!-- FB Cover Maker Tool -->
-                        <div class="stat-card">
-                            <div class="stat-header">
-                                <i class="fas fa-image" style="color: #9b59b6;"></i>
-                                <h3>FB Cover Maker</h3>
-                            </div>
-                            <div class="stat-numbers">
-                                <div class="stat-number"><span class="value success-rate">${toolPerformance.fbcover.success}</span><div class="label">Successful</div></div>
-                                <div class="stat-number"><span class="value fail-rate">${toolPerformance.fbcover.failed}</span><div class="label">Failed</div></div>
-                                <div class="stat-number"><span class="value neutral-rate">${toolPerformance.fbcover.total}</span><div class="label">Total</div></div>
-                            </div>
-                            <div class="progress-bar"><div class="progress-fill" style="width: ${coverRate}%; background: #27ae60;"></div></div>
-                            <p style="text-align:center; margin-top:10px;"><strong>Success Rate: ${coverRate}%</strong></p>
-                            <small style="display:block; text-align:center; opacity:0.7;">${stats.toolUsage?.fbcover || 0} covers generated</small>
-                        </div>
+                        <div class="stat-card"><div class="stat-header"><i class="fas fa-magic" style="color:#667eea;"></i><h3>Remove Background</h3></div><div class="stat-numbers"><div class="stat-number"><span class="value success-rate">${perf.removebg?.success || 0}</span><div class="label">Success</div></div><div class="stat-number"><span class="value fail-rate">${perf.removebg?.failed || 0}</span><div class="label">Failed</div></div></div><div class="progress-bar"><div class="progress-fill" style="width: ${removeBgRate}%; background:#27ae60;"></div></div><p style="text-align:center;"><strong>Success Rate: ${removeBgRate}%</strong></p><small style="display:block; text-align:center;">${stats.toolUsage?.removebg || 0} uses</small></div>
+                        <div class="stat-card"><div class="stat-header"><i class="fas fa-share-alt" style="color:#1877F2;"></i><h3>Facebook Share</h3></div><div class="stat-numbers"><div class="stat-number"><span class="value success-rate">${perf.fbshare?.success || shareStats.totalSuccess}</span><div class="label">Success</div></div><div class="stat-number"><span class="value fail-rate">${perf.fbshare?.failed || shareStats.totalFailed}</span><div class="label">Failed</div></div></div><div class="progress-bar"><div class="progress-fill" style="width: ${fbShareRate}%; background:#27ae60;"></div></div><p style="text-align:center;"><strong>Success Rate: ${fbShareRate}%</strong></p><small style="display:block; text-align:center;">${stats.toolUsage?.fbshare || 0} campaigns</small></div>
+                        <div class="stat-card"><div class="stat-header"><i class="fas fa-download" style="color:#e4405f;"></i><h3>Media Downloader</h3></div><div class="stat-numbers"><div class="stat-number"><span class="value success-rate">${perf.mediadownloader?.success || 0}</span><div class="label">Success</div></div><div class="stat-number"><span class="value fail-rate">${perf.mediadownloader?.failed || 0}</span><div class="label">Failed</div></div></div><div class="progress-bar"><div class="progress-fill" style="width: ${mediaRate}%; background:#27ae60;"></div></div><p style="text-align:center;"><strong>Success Rate: ${mediaRate}%</strong></p><small style="display:block; text-align:center;">${stats.toolUsage?.mediadownloader || 0} downloads</small></div>
+                        <div class="stat-card"><div class="stat-header"><i class="fas fa-image" style="color:#9b59b6;"></i><h3>FB Cover Maker</h3></div><div class="stat-numbers"><div class="stat-number"><span class="value success-rate">${perf.fbcover?.success || 0}</span><div class="label">Success</div></div><div class="stat-number"><span class="value fail-rate">${perf.fbcover?.failed || 0}</span><div class="label">Failed</div></div></div><div class="progress-bar"><div class="progress-fill" style="width: ${coverRate}%; background:#27ae60;"></div></div><p style="text-align:center;"><strong>Success Rate: ${coverRate}%</strong></p><small style="display:block; text-align:center;">${stats.toolUsage?.fbcover || 0} covers</small></div>
+                        <div class="stat-card"><div class="stat-header"><i class="fas fa-bomb" style="color:#e74c3c;"></i><h3>SMS Bomber</h3></div><div class="stat-numbers"><div class="stat-number"><span class="value success-rate">${perf.smsbomber?.success || 0}</span><div class="label">Success</div></div><div class="stat-number"><span class="value fail-rate">${perf.smsbomber?.failed || 0}</span><div class="label">Failed</div></div></div><div class="progress-bar"><div class="progress-fill" style="width: ${smsRate}%; background:#27ae60;"></div></div><p style="text-align:center;"><strong>Success Rate: ${smsRate}%</strong></p><small style="display:block; text-align:center;">${stats.toolUsage?.smsbomber || 0} attacks</small></div>
+                        <div class="stat-card"><div class="stat-header"><i class="fas fa-id-card" style="color:#f39c12;"></i><h3>ID Templates</h3></div><div class="stat-numbers"><div class="stat-number"><span class="value success-rate">${perf.idtemplates?.success || 0}</span><div class="label">Success</div></div><div class="stat-number"><span class="value fail-rate">${perf.idtemplates?.failed || 0}</span><div class="label">Failed</div></div></div><div class="progress-bar"><div class="progress-fill" style="width: ${idRate}%; background:#27ae60;"></div></div><p style="text-align:center;"><strong>Success Rate: ${idRate}%</strong></p><small style="display:block; text-align:center;">${stats.toolUsage?.idtemplates || 0} views</small></div>
                     </div>
-                    
-                    <div class="card">
-                        <h3><i class="fas fa-chart-pie"></i> Overall Performance</h3>
-                        <div class="chart-container">
-                            <canvas id="overallChart"></canvas>
-                        </div>
-                        <div style="display: flex; justify-content: center; gap: 30px; margin-top: 20px;">
-                            <div><span style="color: #27ae60;">●</span> Success: ${toolPerformance.removebg.success + toolPerformance.fbshare.success + toolPerformance.mediadownloader.success + toolPerformance.fbcover.success}</div>
-                            <div><span style="color: #e74c3c;">●</span> Failed: ${toolPerformance.removebg.failed + toolPerformance.fbshare.failed + toolPerformance.mediadownloader.failed + toolPerformance.fbcover.failed}</div>
-                        </div>
-                    </div>
-                    
-                    <div class="card">
-                        <h3><i class="fas fa-rocket"></i> Quick Access Tools</h3>
-                        <div class="platforms">
-                            <div class="platform-card" onclick="document.querySelector('[data-tool=removebg]').click()"><i class="fas fa-magic"></i><span>Remove BG</span></div>
-                            <div class="platform-card" onclick="document.querySelector('[data-tool=fbshare]').click()"><i class="fas fa-share-alt"></i><span>FB Share</span></div>
-                            <div class="platform-card" onclick="document.querySelector('[data-tool=mediadownloader]').click()"><i class="fas fa-download"></i><span>Downloader</span></div>
-                            <div class="platform-card" onclick="document.querySelector('[data-tool=fbcover]').click()"><i class="fas fa-image"></i><span>Cover Maker</span></div>
-                        </div>
-                    </div>
+                    <div class="card"><h3><i class="fas fa-chart-pie"></i> Overall Performance</h3><div class="chart-container"><canvas id="overallChart"></canvas></div><div style="display:flex; justify-content:center; gap:30px; margin-top:20px;"><div><span style="color:#27ae60;">●</span> Success: ${(perf.removebg?.success||0)+(perf.fbshare?.success||0)+(perf.mediadownloader?.success||0)+(perf.fbcover?.success||0)+(perf.smsbomber?.success||0)+(perf.idtemplates?.success||0)}</div><div><span style="color:#e74c3c;">●</span> Failed: ${(perf.removebg?.failed||0)+(perf.fbshare?.failed||0)+(perf.mediadownloader?.failed||0)+(perf.fbcover?.failed||0)+(perf.smsbomber?.failed||0)+(perf.idtemplates?.failed||0)}</div></div></div>
+                    <div class="card"><h3><i class="fas fa-rocket"></i> Quick Access Tools</h3><div class="platforms"><div class="platform-card" onclick="document.querySelector('[data-tool=removebg]').click()"><i class="fas fa-magic"></i><span>Remove BG</span></div><div class="platform-card" onclick="document.querySelector('[data-tool=fbshare]').click()"><i class="fas fa-share-alt"></i><span>FB Share</span></div><div class="platform-card" onclick="document.querySelector('[data-tool=mediadownloader]').click()"><i class="fas fa-download"></i><span>Downloader</span></div><div class="platform-card" onclick="document.querySelector('[data-tool=fbcover]').click()"><i class="fas fa-image"></i><span>Cover Maker</span></div><div class="platform-card" onclick="document.querySelector('[data-tool=smsbomber]').click()"><i class="fas fa-bomb"></i><span>SMS Bomber</span></div><div class="platform-card" onclick="document.querySelector('[data-tool=idtemplates]').click()"><i class="fas fa-id-card"></i><span>ID Templates</span></div></div></div>
                 `;
                 
-                // Create overall chart
                 if (statsChart) statsChart.destroy();
                 const ctx = document.getElementById('overallChart').getContext('2d');
-                const totalSuccess = toolPerformance.removebg.success + toolPerformance.fbshare.success + toolPerformance.mediadownloader.success + toolPerformance.fbcover.success;
-                const totalFailed = toolPerformance.removebg.failed + toolPerformance.fbshare.failed + toolPerformance.mediadownloader.failed + toolPerformance.fbcover.failed;
-                statsChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: { 
-                        labels: ['Success', 'Failed'], 
-                        datasets: [{ 
-                            data: [totalSuccess, totalFailed], 
-                            backgroundColor: ['#27ae60', '#e74c3c'], 
-                            borderWidth: 0 
-                        }] 
-                    },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: true, 
-                        plugins: { 
-                            legend: { position: 'bottom' },
-                            tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${ctx.raw} (${Math.round((ctx.raw / (totalSuccess + totalFailed)) * 100)}%)` } }
-                        } 
-                    }
-                });
+                const totalSuccess = (perf.removebg?.success||0)+(perf.fbshare?.success||0)+(perf.mediadownloader?.success||0)+(perf.fbcover?.success||0)+(perf.smsbomber?.success||0)+(perf.idtemplates?.success||0);
+                const totalFailed = (perf.removebg?.failed||0)+(perf.fbshare?.failed||0)+(perf.mediadownloader?.failed||0)+(perf.fbcover?.failed||0)+(perf.smsbomber?.failed||0)+(perf.idtemplates?.failed||0);
+                statsChart = new Chart(ctx, { type: 'doughnut', data: { labels: ['Success', 'Failed'], datasets: [{ data: [totalSuccess, totalFailed], backgroundColor: ['#27ae60', '#e74c3c'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } } });
             } catch(e) { console.error(e); }
         }
 
-        // Updated Remove BG with Drag & Drop and performance tracking
         function getRemoveBGHTML() {
             return `<div class="card"><h2><i class="fas fa-magic"></i> Remove Background</h2><p>Upload or drag & drop an image to remove its background instantly with AI</p></div>
-            <div class="input-section">
-                <div id="dropZone" class="drop-zone">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p><strong>Drag & Drop your image here</strong></p>
-                    <p class="small">or click to browse</p>
-                    <input type="file" id="imageInput" accept="image/*" style="display: none;">
-                </div>
-            </div>
+            <div class="input-section"><div id="dropZone" class="drop-zone"><i class="fas fa-cloud-upload-alt"></i><p><strong>Drag & Drop your image here</strong></p><p class="small">or click to browse</p><input type="file" id="imageInput" accept="image/*" style="display: none;"></div></div>
             <div class="result-section" id="removeBgResult"><div class="result-header"><i class="fas fa-info-circle"></i><h3>Result</h3></div><div style="text-align:center;padding:30px;">Upload an image to see the magic happen ✨</div></div>`;
         }
 
         function attachRemoveBGEvents() {
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('imageInput');
-            
             dropZone.onclick = () => fileInput.click();
             dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); };
             dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
-            dropZone.ondrop = (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('drag-over');
-                const file = e.dataTransfer.files[0];
-                if (file && file.type.startsWith('image/')) {
-                    fileInput.files = e.dataTransfer.files;
-                    processImage(file);
-                } else { alert('Please drop an image file'); }
-            };
+            dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('drag-over'); const file = e.dataTransfer.files[0]; if (file && file.type.startsWith('image/')) { fileInput.files = e.dataTransfer.files; processImage(file); } else { alert('Please drop an image file'); } };
             fileInput.onchange = (e) => { if (e.target.files[0]) processImage(e.target.files[0]); };
-            
             async function processImage(file) {
                 const formData = new FormData();
                 formData.append('image', file);
-                
-                // Show preview
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById('removeBgResult').innerHTML = `<div class="result-header"><i class="fas fa-spinner fa-pulse"></i><h3>Processing...</h3></div><div style="text-align:center;"><img src="${e.target.result}" style="max-width:100%; border-radius:16px; margin-bottom:15px;"><div class="loading"><i class="fas fa-spinner fa-pulse"></i><p>Removing background...</p></div></div>`;
-                };
+                reader.onload = (e) => { document.getElementById('removeBgResult').innerHTML = `<div class="result-header"><i class="fas fa-spinner fa-pulse"></i><h3>Processing...</h3></div><div style="text-align:center;"><img src="${e.target.result}" style="max-width:100%; border-radius:16px; margin-bottom:15px;"><div class="loading"><i class="fas fa-spinner fa-pulse"></i><p>Removing background...</p></div></div>`; };
                 reader.readAsDataURL(file);
-                
                 try {
                     const res = await fetch('/api/removebg', { method: 'POST', body: formData });
                     const data = await res.json();
                     if (data.success) {
-                        updateToolPerformance('removebg', 1, 0);
-                        document.getElementById('removeBgResult').innerHTML = `<div class="result-header"><i class="fas fa-check-circle"></i><h3>Success!</h3></div><div class="media-card"><div class="media-info"><div class="media-title">Background Removed Image</div></div><a href="${data.url}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a></div><img src="${data.url}" style="max-width:100%; border-radius:16px; margin-top:15px;">`;
-                    } else { 
-                        updateToolPerformance('removebg', 0, 1);
-                        throw new Error(data.error); 
-                    }
-                } catch(e) { 
-                    updateToolPerformance('removebg', 0, 1);
-                    document.getElementById('removeBgResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`; 
-                }
+                        document.getElementById('removeBgResult').innerHTML = `<div class="result-header"><i class="fas fa-check-circle"></i><h3>Success!</h3></div><div class="media-card"><div><div class="media-title">Background Removed Image</div></div><a href="${data.url}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a></div><img src="${data.url}" style="max-width:100%; border-radius:16px; margin-top:15px;">`;
+                    } else { throw new Error(data.error); }
+                } catch(e) { document.getElementById('removeBgResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`; }
             }
         }
 
-        // Updated FB Share with Live Progress and performance tracking
         function getFBShareHTML() {
             return `<div class="card"><h2><i class="fas fa-share-alt"></i> Facebook Share Tool</h2><p>Auto-share posts to Facebook (up to 5000 shares). Live progress tracking included.</p></div>
             <div class="input-section"><div class="input-group" style="flex-direction:column; gap:12px;"><textarea id="fbCookie" rows="3" placeholder="Facebook cookie (entire cookie string)..." style="resize:vertical;"></textarea><input type="text" id="fbLink" placeholder="Post URL to share..."><input type="number" id="fbLimit" placeholder="Number of shares (max 5000)" max="5000"><button id="fbShareBtn"><i class="fas fa-share"></i> Start Sharing</button></div></div>
@@ -775,91 +656,48 @@
 
         async function attachFBShareEvents() {
             await loadShareHistory();
-            
             document.getElementById('fbShareBtn').onclick = async () => {
                 const cookie = document.getElementById('fbCookie').value.trim();
                 const link = document.getElementById('fbLink').value.trim();
                 const limit = parseInt(document.getElementById('fbLimit').value);
                 if (!cookie || !link || !limit || limit > 5000) { alert('Valid cookie, link, and limit (max 5000) required'); return; }
-                
                 const btn = document.getElementById('fbShareBtn');
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Starting...';
-                
-                // Show live progress widget
+                btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Starting...';
                 const liveProgress = document.getElementById('liveProgress');
                 liveProgress.classList.add('show');
                 document.getElementById('progressPercent').innerText = '0%';
                 document.getElementById('liveProgressFill').style.width = '0%';
                 document.getElementById('progressSuccess').innerText = '0';
                 document.getElementById('progressFailed').innerText = '0';
-                
                 try {
-                    const res = await fetch('/api/share', { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify({ cookie, link, limit }) 
-                    });
+                    const res = await fetch('/api/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cookie, link, limit }) });
                     const data = await res.json();
-                    
-                    if (data.status && data.share_id) {
-                        currentShareId = data.share_id;
-                        startProgressTracking(currentShareId, limit);
-                    } else {
-                        throw new Error(data.message);
-                    }
-                } catch(e) { 
-                    alert('Error: ' + e.message);
-                    liveProgress.classList.remove('show');
-                } finally { 
-                    btn.disabled = false; 
-                    btn.innerHTML = '<i class="fas fa-share"></i> Start Sharing';
-                }
+                    if (data.status && data.share_id) { currentShareId = data.share_id; startProgressTracking(currentShareId, limit); }
+                    else { throw new Error(data.message); }
+                } catch(e) { alert('Error: ' + e.message); liveProgress.classList.remove('show'); }
+                finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-share"></i> Start Sharing'; }
             };
-            
             document.getElementById('cancelShareBtn').onclick = async () => {
                 if (currentShareId) {
-                    try {
-                        await fetch(`/api/share/${currentShareId}/cancel`, { method: 'POST' });
-                        if (progressInterval) clearInterval(progressInterval);
-                        document.getElementById('liveProgress').classList.remove('show');
-                        alert('Share cancelled');
-                    } catch(e) { console.error(e); }
+                    try { await fetch(`/api/share/${currentShareId}/cancel`, { method: 'POST' }); if (progressInterval) clearInterval(progressInterval); document.getElementById('liveProgress').classList.remove('show'); alert('Share cancelled'); } catch(e) { console.error(e); }
                 }
             };
         }
         
         function startProgressTracking(shareId, totalLimit) {
             if (progressInterval) clearInterval(progressInterval);
-            
             progressInterval = setInterval(async () => {
                 try {
                     const res = await fetch(`/api/share/${shareId}/progress`);
                     const data = await res.json();
                     if (data.status && data.share) {
-                        const progress = data.share.progress || 0;
-                        const success = data.share.success || 0;
-                        const failed = data.share.failed || 0;
-                        
-                        document.getElementById('progressPercent').innerText = `${progress}%`;
-                        document.getElementById('liveProgressFill').style.width = `${progress}%`;
-                        document.getElementById('progressSuccess').innerText = success;
-                        document.getElementById('progressFailed').innerText = failed;
-                        
-                        if (data.share.status === 'completed') {
-                            updateToolPerformance('fbshare', success, failed);
+                        document.getElementById('progressPercent').innerText = `${data.share.progress || 0}%`;
+                        document.getElementById('liveProgressFill').style.width = `${data.share.progress || 0}%`;
+                        document.getElementById('progressSuccess').innerText = data.share.success || 0;
+                        document.getElementById('progressFailed').innerText = data.share.failed || 0;
+                        if (data.share.status === 'completed' || data.share.status === 'failed') {
                             clearInterval(progressInterval);
-                            setTimeout(() => {
-                                document.getElementById('liveProgress').classList.remove('show');
-                                loadShareHistory();
-                                loadDashboard();
-                            }, 3000);
-                        } else if (data.share.status === 'failed') {
-                            updateToolPerformance('fbshare', success, failed);
-                            clearInterval(progressInterval);
-                            setTimeout(() => {
-                                document.getElementById('liveProgress').classList.remove('show');
-                            }, 3000);
+                            setTimeout(() => { document.getElementById('liveProgress').classList.remove('show'); loadShareHistory(); loadDashboard(); }, 3000);
                         } else if (data.share.status === 'cancelled') {
                             clearInterval(progressInterval);
                             document.getElementById('liveProgress').classList.remove('show');
@@ -873,17 +711,16 @@
             try {
                 const res = await fetch('/api/share/history');
                 const data = await res.json();
-                const historyHtml = data.history && data.history.length ? data.history.map(h => `<div class="media-card"><div><strong>${new Date(h.startTime).toLocaleString()}</strong><br><small style="opacity:0.7;">${h.link?.substring(0,60) || 'N/A'}...</small></div><div><span style="color:#27ae60;">✅ ${h.success || 0}</span> / <span style="color:#e74c3c;">❌ ${h.failed || 0}</span><br><small>${h.status}</small></div></div>`).join('') : '<div style="text-align:center;padding:20px;">No share history yet. Start your first campaign!</div>';
+                const historyHtml = data.history && data.history.length ? data.history.map(h => `<div class="media-card"><div><strong>${new Date(h.startTime).toLocaleString()}</strong></div><div><span style="color:#27ae60;">✅ ${h.success || 0}</span> / <span style="color:#e74c3c;">❌ ${h.failed || 0}</span><br><small>${h.status}</small></div></div>`).join('') : '<div style="text-align:center;padding:20px;">No share history yet.</div>';
                 document.getElementById('shareHistoryList').innerHTML = historyHtml;
             } catch(e) { console.error(e); }
         }
 
-        // Media Downloader with performance tracking and UPDATED Spotify handler with proxy
         function getMediaDownloaderHTML() {
             return `<div class="card"><h2><i class="fas fa-download"></i> Media Downloader</h2><p>Download videos & audio from TikTok, Instagram, YouTube, Spotify, Facebook, SoundCloud</p></div>
             <div class="platforms" id="downloadPlatforms"></div>
             <div class="input-section"><div class="input-group"><input type="text" id="mediaUrl" placeholder="Paste media URL..."><button id="downloadMediaBtn"><i class="fas fa-download"></i> Fetch Media</button></div></div>
-            <div class="result-section" id="downloadResult"><div class="result-header"><i class="fas fa-info-circle"></i><h3>Result</h3></div><div style="text-align:center;padding:30px;">Select a platform and paste your URL to start downloading.</div></div>`;
+            <div class="result-section" id="downloadResult"><div class="result-header"><i class="fas fa-info-circle"></i><h3>Result</h3></div><div style="text-align:center;padding:30px;">Select a platform and paste your URL.</div></div>`;
         }
 
         function attachMediaDownloaderEvents() {
@@ -891,193 +728,126 @@
             let selectedPlatform = 'tiktok';
             const platformDiv = document.getElementById('downloadPlatforms');
             platformDiv.innerHTML = platforms.map(p => `<div class="platform-card ${p === 'tiktok' ? 'active' : ''}" data-platform="${p}"><i class="fab fa-${p}"></i><span>${p.charAt(0).toUpperCase() + p.slice(1)}</span></div>`).join('');
-            
             document.querySelectorAll('#downloadPlatforms .platform-card').forEach(card => {
                 card.onclick = () => {
                     document.querySelectorAll('#downloadPlatforms .platform-card').forEach(c => c.classList.remove('active'));
                     card.classList.add('active');
                     selectedPlatform = card.dataset.platform;
-                    // Update placeholder based on platform
-                    const urlInput = document.getElementById('mediaUrl');
-                    const placeholders = {
-                        tiktok: 'https://www.tiktok.com/@username/video/123456789...',
-                        instagram: 'https://www.instagram.com/p/CxYZ...',
-                        youtube: 'https://www.youtube.com/watch?v=...',
-                        spotify: 'https://open.spotify.com/track/...',
-                        facebook: 'https://www.facebook.com/watch?v=...',
-                        soundcloud: 'https://soundcloud.com/user/track...'
-                    };
-                    urlInput.placeholder = placeholders[selectedPlatform] || 'Paste media URL...';
+                    const placeholders = { tiktok: 'https://www.tiktok.com/@username/video/...', instagram: 'https://www.instagram.com/p/...', youtube: 'https://www.youtube.com/watch?v=...', spotify: 'https://open.spotify.com/track/...', facebook: 'https://www.facebook.com/watch?v=...', soundcloud: 'https://soundcloud.com/user/track...' };
+                    document.getElementById('mediaUrl').placeholder = placeholders[selectedPlatform];
                 };
             });
-            
             document.getElementById('downloadMediaBtn').onclick = async () => {
                 const url = document.getElementById('mediaUrl').value.trim();
                 if (!url) { alert('Please enter a URL'); return; }
                 const btn = document.getElementById('downloadMediaBtn');
-                btn.disabled = true; 
-                btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Fetching...';
-                document.getElementById('downloadResult').innerHTML = `<div class="loading"><i class="fas fa-spinner fa-pulse"></i><p>Fetching media from ${selectedPlatform.toUpperCase()}...</p></div>`;
-                
+                btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Fetching...';
+                document.getElementById('downloadResult').innerHTML = `<div class="loading"><i class="fas fa-spinner fa-pulse"></i><p>Fetching media...</p></div>`;
                 try {
-                    const res = await fetch('/api/download-media', { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify({ platform: selectedPlatform, url }) 
-                    });
+                    const res = await fetch('/api/download-media', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ platform: selectedPlatform, url }) });
                     const data = await res.json();
-                    
-                    if (data.success) {
-                        updateToolPerformance('mediadownloader', 1, 0);
-                        displayDownloadResult(data, selectedPlatform);
-                    } else {
-                        updateToolPerformance('mediadownloader', 0, 1);
-                        throw new Error(data.error);
-                    }
-                } catch(e) { 
-                    updateToolPerformance('mediadownloader', 0, 1);
-                    document.getElementById('downloadResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`; 
-                }
-                finally { 
-                    btn.disabled = false; 
-                    btn.innerHTML = '<i class="fas fa-download"></i> Fetch Media'; 
-                }
+                    if (data.success) { displayDownloadResult(data, selectedPlatform); }
+                    else { throw new Error(data.error); }
+                } catch(e) { document.getElementById('downloadResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`; }
+                finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-download"></i> Fetch Media'; }
             };
         }
 
-        // UPDATED: Complete displayDownloadResult function with Spotify download proxy
         function displayDownloadResult(response, platform) {
             const data = response.data;
-            
             let html = `<div class="result-header"><i class="fab fa-${platform}"></i><h3>${platform.toUpperCase()} Results</h3></div><div class="result-content">`;
-            
             if (platform === 'tiktok' && data.data) {
-                if (data.data.video) {
-                    html += `<div class="media-card">
-                        <div><i class="fas fa-video"></i> Video</div>
-                        <a href="${data.data.video}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download Video</a>
-                    </div>`;
-                }
-                if (data.data.audio) {
-                    html += `<div class="media-card">
-                        <div><i class="fas fa-music"></i> Audio</div>
-                        <a href="${data.data.audio}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download Audio</a>
-                    </div>`;
-                }
-            } 
-            else if ((platform === 'instagram' || platform === 'facebook') && data.data?.videoUrl) {
-                html += `<div class="media-card">
-                    <div><i class="fab fa-${platform}"></i> Video</div>
-                    <a href="${data.data.videoUrl}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a>
-                </div>`;
-            } 
-            else if (platform === 'youtube') {
-                if (data.title) html += `<div style="margin-bottom:15px;"><strong><i class="fab fa-youtube"></i> ${escapeHtml(data.title)}</strong></div>`;
-                if (data.mp3) {
-                    html += `<div class="media-card">
-                        <div><i class="fas fa-music"></i> MP3 Audio</div>
-                        <a href="${data.mp3}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download MP3</a>
-                    </div>`;
-                }
-                if (data.mp4) {
-                    html += `<div class="media-card">
-                        <div><i class="fas fa-video"></i> MP4 Video</div>
-                        <a href="${data.mp4}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download MP4</a>
-                    </div>`;
-                }
-            }
-            else if (platform === 'spotify') {
-                // Handle the Spotify API response format with proxy download
+                if (data.data.video) html += `<div class="media-card"><div><i class="fas fa-video"></i> Video</div><a href="${data.data.video}" class="download-btn" target="_blank"><i class="fas fa-download"></i> Download</a></div>`;
+                if (data.data.audio) html += `<div class="media-card"><div><i class="fas fa-music"></i> Audio</div><a href="${data.data.audio}" class="download-btn" target="_blank"><i class="fas fa-download"></i> Download</a></div>`;
+            } else if ((platform === 'instagram' || platform === 'facebook') && data.data?.videoUrl) {
+                html += `<div class="media-card"><div><i class="fab fa-${platform}"></i> Video</div><a href="${data.data.videoUrl}" class="download-btn" target="_blank"><i class="fas fa-download"></i> Download</a></div>`;
+            } else if (platform === 'youtube') {
+                if (data.title) html += `<div style="margin-bottom:15px;"><strong>${escapeHtml(data.title)}</strong></div>`;
+                if (data.mp3) html += `<div class="media-card"><div><i class="fas fa-music"></i> MP3</div><a href="${data.mp3}" class="download-btn" target="_blank"><i class="fas fa-download"></i> MP3</a></div>`;
+                if (data.mp4) html += `<div class="media-card"><div><i class="fas fa-video"></i> MP4</div><a href="${data.mp4}" class="download-btn" target="_blank"><i class="fas fa-download"></i> MP4</a></div>`;
+            } else if (platform === 'spotify') {
                 const trackData = data.data || data;
                 const title = trackData.title || trackData.name || 'Spotify Track';
                 const artist = trackData.artist || trackData.artists || '';
                 const albumImage = trackData.albumImage || '';
                 const duration = trackData.duration || '';
                 const downloadUrl = trackData.downloadUrl || trackData.download || (trackData.download?.url);
-                const expires = trackData.downloadExpires || trackData.expires;
-                const note = trackData.downloadNote || trackData.note || 'Download link expires soon - save immediately!';
-                
                 if (downloadUrl) {
-                    // Use the proxy endpoint to download the file
-                    const proxyDownloadUrl = `/api/spotify-download?url=${encodeURIComponent(downloadUrl)}`;
-                    
-                    html += `
-                        <div class="media-card spotify-card" style="display:block;">
-                            <div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
-                                ${albumImage ? `<img src="${albumImage}" style="width:60px; height:60px; border-radius:8px;">` : '<div style="width:60px; height:60px; background:#1DB954; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="fab fa-spotify" style="font-size:30px; color:white;"></i></div>'}
-                                <div style="flex:1;">
-                                    <div class="media-title" style="font-weight:700; margin-bottom:5px;"><i class="fab fa-spotify" style="color:#1DB954;"></i> ${escapeHtml(title)}</div>
-                                    ${artist ? `<div class="media-meta" style="font-size:0.85rem; opacity:0.8;">Artist: ${escapeHtml(artist)}</div>` : ''}
-                                    ${duration ? `<div class="media-meta" style="font-size:0.8rem; opacity:0.7;">Duration: ${duration}</div>` : ''}
-                                    ${expires ? `<div class="media-meta" style="font-size:0.75rem; color:#e74c3c; margin-top:5px;">⚠️ Link expires: ${new Date(expires).toLocaleString()}</div>` : ''}
-                                    ${note ? `<div class="media-meta" style="font-size:0.7rem; opacity:0.6; margin-top:3px;">${escapeHtml(note)}</div>` : ''}
-                                </div>
-                                <a href="${proxyDownloadUrl}" class="download-btn" download target="_blank" style="background: linear-gradient(135deg, #1DB954, #169c45);">
-                                    <i class="fas fa-download"></i> Download MP3
-                                </a>
-                            </div>
-                        </div>`;
-                } else {
-                    html += `<div class="error" style="padding:20px;"><i class="fab fa-spotify"></i> No download link available. The track may be protected or unavailable.</div>`;
-                }
-            }
-            else if (platform === 'soundcloud' && data.url) {
-                html += `<div class="media-card">
-                    <div><i class="fab fa-soundcloud"></i> ${escapeHtml(data.title || 'Audio Track')}</div>
-                    <a href="${data.url}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a>
-                </div>`;
-            }
-            else {
-                html += '<div style="text-align:center;padding:20px;">No downloadable media found. Please check the URL and try again.</div>';
-            }
-            
+                    const proxyUrl = `/api/spotify-download?url=${encodeURIComponent(downloadUrl)}`;
+                    html += `<div class="media-card spotify-card"><div style="display:flex; align-items:center; gap:15px; flex-wrap:wrap;">${albumImage ? `<img src="${albumImage}" style="width:50px; height:50px; border-radius:8px;">` : '<div style="width:50px; height:50px; background:#1DB954; border-radius:8px; display:flex; align-items:center; justify-content:center;"><i class="fab fa-spotify" style="font-size:24px; color:white;"></i></div>'}<div style="flex:1;"><div><strong>${escapeHtml(title)}</strong></div>${artist ? `<div style="font-size:0.8rem;">${escapeHtml(artist)}</div>` : ''}${duration ? `<div style="font-size:0.7rem;">Duration: ${duration}</div>` : ''}</div><a href="${proxyUrl}" class="download-btn" style="background:#1DB954;" download><i class="fas fa-download"></i> Download MP3</a></div></div>`;
+                } else { html += '<div class="error">No download link available.</div>'; }
+            } else if (platform === 'soundcloud' && data.url) {
+                html += `<div class="media-card"><div><i class="fab fa-soundcloud"></i> ${escapeHtml(data.title || 'Audio')}</div><a href="${data.url}" class="download-btn" target="_blank"><i class="fas fa-download"></i> Download</a></div>`;
+            } else { html += '<div style="text-align:center;padding:20px;">No downloadable media found.</div>'; }
             html += '</div>';
             document.getElementById('downloadResult').innerHTML = html;
         }
 
-        // FB Cover Maker with performance tracking
         function getFBCoverHTML() {
             return `<div class="card"><h2><i class="fas fa-image"></i> Facebook Cover Maker</h2><p>Generate a custom Facebook cover banner with your personal information</p></div>
-            <div class="input-section"><div class="input-group" style="flex-direction:column; gap:12px;"><input type="text" id="coverName" placeholder="Your Name"><input type="text" id="coverSubname" placeholder="Subtitle / Tagline"><input type="text" id="coverAddress" placeholder="Address / Location"><input type="email" id="coverEmail" placeholder="Email Address"><input type="text" id="coverPhone" placeholder="Phone Number"><input type="text" id="coverUid" placeholder="Facebook UID *Required" required><select id="coverColor"><option value="red">🔴 Red</option><option value="blue">🔵 Blue</option><option value="green">🟢 Green</option><option value="purple">🟣 Purple</option><option value="orange">🟠 Orange</option><option value="pink">🌸 Pink</option></select><button id="generateCoverBtn"><i class="fas fa-image"></i> Generate Cover</button></div></div>
-            <div class="result-section" id="coverResult"><div class="result-header"><i class="fas fa-image"></i><h3>Your Cover Preview</h3></div><div style="text-align:center;padding:30px;">Fill in your details (UID required) and click Generate.</div></div>`;
+            <div class="input-section"><div class="input-group" style="flex-direction:column; gap:12px;"><input type="text" id="coverName" placeholder="Your Name"><input type="text" id="coverSubname" placeholder="Subtitle"><input type="text" id="coverAddress" placeholder="Address"><input type="email" id="coverEmail" placeholder="Email"><input type="text" id="coverPhone" placeholder="Phone"><input type="text" id="coverUid" placeholder="Facebook UID *Required" required><select id="coverColor"><option value="red">🔴 Red</option><option value="blue">🔵 Blue</option><option value="green">🟢 Green</option><option value="purple">🟣 Purple</option><option value="orange">🟠 Orange</option><option value="pink">🌸 Pink</option></select><button id="generateCoverBtn"><i class="fas fa-image"></i> Generate Cover</button></div></div>
+            <div class="result-section" id="coverResult"><div class="result-header"><i class="fas fa-image"></i><h3>Your Cover</h3></div><div style="text-align:center;padding:30px;">Fill in your details and click Generate.</div></div>`;
         }
 
         function attachFBCoverEvents() {
             document.getElementById('generateCoverBtn').onclick = async () => {
                 const uid = document.getElementById('coverUid').value.trim();
                 if (!uid) { alert('Facebook UID is required!'); return; }
-                
                 const btn = document.getElementById('generateCoverBtn');
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Generating...';
-                
-                const params = new URLSearchParams({
-                    name: document.getElementById('coverName').value || 'User',
-                    subname: document.getElementById('coverSubname').value || '',
-                    address: document.getElementById('coverAddress').value || '',
-                    email: document.getElementById('coverEmail').value || '',
-                    sdt: document.getElementById('coverPhone').value || '',
-                    uid: uid,
-                    color: document.getElementById('coverColor').value
-                });
+                btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Generating...';
+                const params = new URLSearchParams({ name: document.getElementById('coverName').value || 'User', subname: document.getElementById('coverSubname').value || '', address: document.getElementById('coverAddress').value || '', email: document.getElementById('coverEmail').value || '', sdt: document.getElementById('coverPhone').value || '', uid: uid, color: document.getElementById('coverColor').value });
                 const coverUrl = `/api/fbcover?${params.toString()}`;
-                
-                // Test if image loads successfully
                 const img = new Image();
-                img.onload = () => {
-                    updateToolPerformance('fbcover', 1, 0);
-                    document.getElementById('coverResult').innerHTML = `<div class="result-header"><i class="fas fa-check-circle"></i><h3>Cover Generated!</h3></div><div style="text-align:center;"><img src="${coverUrl}" style="max-width:100%; border-radius:16px; margin-bottom:15px; box-shadow:0 10px 30px rgba(0,0,0,0.2);"><div><a href="${coverUrl}" class="download-btn" download="fb_cover_${Date.now()}.png"><i class="fas fa-download"></i> Download Cover</a></div></div>`;
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-image"></i> Generate Cover';
-                };
-                img.onerror = () => {
-                    updateToolPerformance('fbcover', 0, 1);
-                    document.getElementById('coverResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>Failed to generate cover. Please check your UID and try again.</p></div>`;
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-image"></i> Generate Cover';
-                };
+                img.onload = () => { document.getElementById('coverResult').innerHTML = `<div class="result-header"><i class="fas fa-check-circle"></i><h3>Cover Generated!</h3></div><div style="text-align:center;"><img src="${coverUrl}" style="max-width:100%; border-radius:16px; margin-bottom:15px;"><div><a href="${coverUrl}" class="download-btn" download="fb_cover.png"><i class="fas fa-download"></i> Download</a></div></div>`; btn.disabled = false; btn.innerHTML = '<i class="fas fa-image"></i> Generate Cover'; };
+                img.onerror = () => { document.getElementById('coverResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>Failed to generate cover.</p></div>`; btn.disabled = false; btn.innerHTML = '<i class="fas fa-image"></i> Generate Cover'; };
                 img.src = coverUrl;
             };
+        }
+
+        function getSMSBomberHTML() {
+            return `<div class="card"><h2><i class="fas fa-bomb"></i> SMS Bomber</h2><p>Send bulk SMS messages to any phone number (max 50 messages)</p></div>
+            <div class="input-section"><div class="input-group" style="flex-direction:column; gap:12px;"><input type="tel" id="smsPhone" placeholder="Phone number (e.g., 09979939317 or +639979939317)"><input type="number" id="smsAmount" placeholder="Number of SMS (max 50)" min="1" max="50" value="10"><button id="smsBombBtn"><i class="fas fa-bomb"></i> Start SMS Bomber</button></div></div>
+            <div class="result-section" id="smsResult"><div class="result-header"><i class="fas fa-info-circle"></i><h3>Result</h3></div><div style="text-align:center;padding:30px;">Enter a phone number and click Start.</div></div>`;
+        }
+
+        function attachSMSBomberEvents() {
+            document.getElementById('smsBombBtn').onclick = async () => {
+                const phone = document.getElementById('smsPhone').value.trim();
+                const amount = parseInt(document.getElementById('smsAmount').value);
+                if (!phone) { alert('Please enter a phone number'); return; }
+                if (amount < 1 || amount > 50) { alert('Amount must be between 1 and 50'); return; }
+                const btn = document.getElementById('smsBombBtn');
+                btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Starting...';
+                document.getElementById('smsResult').innerHTML = `<div class="loading"><i class="fas fa-spinner fa-pulse"></i><p>Starting SMS bombing for ${phone}...</p></div>`;
+                try {
+                    const res = await fetch('/api/smsbomb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount }) });
+                    const data = await res.json();
+                    if (data.success) {
+                        document.getElementById('smsResult').innerHTML = `<div class="result-header"><i class="fas fa-check-circle"></i><h3>Success!</h3></div><div class="media-card sms-card"><div><i class="fas fa-bomb"></i> ${data.message || 'SMS bombing started!'}</div><div>📱 ${data.phone}<br>📨 ${data.amount} messages</div></div>`;
+                    } else { throw new Error(data.error); }
+                } catch(e) { document.getElementById('smsResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`; }
+                finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-bomb"></i> Start SMS Bomber'; }
+            };
+        }
+
+        function getIDTemplatesHTML() {
+            return `<div class="card"><h2><i class="fas fa-id-card"></i> ID Templates</h2><p>Download official ID templates (National ID and PhilHealth ID)</p></div>
+            <div class="result-section" id="idResult"><div class="result-header"><i class="fas fa-id-card"></i><h3>Available IDs</h3></div><div id="idList" style="display:flex; flex-direction:column; gap:15px;"></div></div>`;
+        }
+
+        async function attachIDTemplatesEvents() {
+            try {
+                const res = await fetch('/api/id-templates');
+                const data = await res.json();
+                if (data.success) {
+                    const templates = data.templates;
+                    let html = '';
+                    for (const [key, template] of Object.entries(templates)) {
+                        html += `<div class="id-card"><div><i class="fas fa-id-card"></i> <strong>${template.name}</strong></div><div style="display:flex; gap:10px;"><a href="${template.front}" class="download-btn" download target="_blank" style="background:#3498db;"><i class="fas fa-image"></i> Front</a><a href="${template.back}" class="download-btn" download target="_blank" style="background:#2980b9;"><i class="fas fa-image"></i> Back</a></div></div>`;
+                    }
+                    document.getElementById('idList').innerHTML = html;
+                }
+            } catch(e) { console.error(e); }
         }
 
         loadDashboard();
