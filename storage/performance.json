@@ -1,0 +1,11 @@
+{
+  "tools": {
+    "removebg": { "success": 0, "failed": 0, "total": 0 },
+    "fbshare": { "success": 0, "failed": 0, "total": 0 },
+    "mediadownloader": { "success": 0, "failed": 0, "total": 0 },
+    "fbcover": { "success": 0, "failed": 0, "total": 0 },
+    "smsbomber": { "success": 0, "failed": 0, "total": 0 },
+    "idtemplates": { "success": 0, "failed": 0, "total": 0 }
+  },
+  "lastUpdated": "2026-01-01T00:00:00.000Z"
+}
