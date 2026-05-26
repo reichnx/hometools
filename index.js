@@ -543,7 +543,7 @@ app.get('/api/spotify-download', async (req, res) => {
   }
 });
 
-// ========== SMS BOMBER (FIXED - NO HARDCODED EXAMPLES) ==========
+// ========== SMS BOMBER ==========
 const SMS_API_KEY = '66ec8aa6ce70b55c877c4489fa545c67fee8633a42442343771bd2ade432ecbd';
 const SMS_API_URL = 'https://oreo.gleeze.com/api/smsbomber';
 
@@ -552,15 +552,12 @@ app.post('/api/smsbomb', async (req, res) => {
     await updateCounter('smsbomber');
     let { phone, amount } = req.body;
     
-    // Validation
     if (!phone || phone.trim() === '') {
       return res.status(400).json({ success: false, error: 'Phone number is required' });
     }
     
-    // Clean and validate phone number
     let cleanPhone = phone.toString().trim().replace(/\s/g, '');
     
-    // Remove any leading '0' or '63' and add +63 format
     if (cleanPhone.startsWith('0')) {
       cleanPhone = '+63' + cleanPhone.substring(1);
     } else if (cleanPhone.startsWith('63') && !cleanPhone.startsWith('+')) {
@@ -569,20 +566,14 @@ app.post('/api/smsbomb', async (req, res) => {
       cleanPhone = '+' + cleanPhone;
     }
     
-    // Validate phone number length (should be around 13 characters with +63)
     if (cleanPhone.length < 12 || cleanPhone.length > 15) {
       return res.status(400).json({ success: false, error: 'Invalid phone number format' });
     }
     
     let amountNum = parseInt(amount);
-    if (isNaN(amountNum) || amountNum < 1) {
-      amountNum = 1;
-    }
-    if (amountNum > 50) {
-      amountNum = 50;
-    }
+    if (isNaN(amountNum) || amountNum < 1) amountNum = 1;
+    if (amountNum > 50) amountNum = 50;
     
-    // Call the SMS bomber API
     const apiUrl = `${SMS_API_URL}?phone=${encodeURIComponent(cleanPhone)}&amount=${amountNum}&api_key=${SMS_API_KEY}`;
     
     const response = await axios.get(apiUrl, { 
@@ -611,7 +602,6 @@ app.post('/api/smsbomb', async (req, res) => {
     console.error('SMS Bomber error:', error.message);
     await updatePerformance('smsbomber', 0, 1);
     
-    // Handle specific error cases
     if (error.response?.status === 429) {
       res.status(429).json({ success: false, error: 'Rate limited. Please wait a moment before trying again.' });
     } else if (error.response?.status === 403) {
