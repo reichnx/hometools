@@ -423,7 +423,7 @@ app.post('/api/share/:id/cancel', async (req, res) => {
   }
 });
 
-// ========== MEDIA DOWNLOADER ==========
+// ========== MEDIA DOWNLOADER WITH UPDATED SPOTIFY API ==========
 const API_ENDPOINTS = {
   tiktok: (url) => `https://api.zenithapi.qzz.io/tiktok?url=${encodeURIComponent(url)}`,
   instagram: (url) => `https://api-library-kohi.onrender.com/api/alldl?url=${encodeURIComponent(url)}`,
@@ -433,19 +433,141 @@ const API_ENDPOINTS = {
   soundcloud: (url) => `https://jonell.ccprojects.gleeze.com/api/soundcloud?url=${encodeURIComponent(url)}`
 };
 
+// Helper function to handle Spotify response
+async function handleSpotifyResponse(apiUrl) {
+  try {
+    const response = await axios.get(apiUrl, { timeout: 30000 });
+    const data = response.data;
+    
+    // Check if the response has the expected Spotify structure
+    if (data && data.success === true && data.data) {
+      const spotifyData = data.data;
+      
+      // Extract track information
+      const trackInfo = spotifyData.track || {};
+      const downloadInfo = spotifyData.download || {};
+      
+      // Return formatted response for frontend
+      return {
+        success: true,
+        platform: 'spotify',
+        data: {
+          title: trackInfo.name || 'Unknown Track',
+          artist: trackInfo.artists || 'Unknown Artist',
+          albumImage: trackInfo.albumImage || '',
+          duration: trackInfo.duration || '',
+          explicit: trackInfo.explicit || false,
+          spotifyUrl: trackInfo.spotifyUrl || '',
+          downloadUrl: downloadInfo.url || null,
+          downloadExpires: downloadInfo.expires || null,
+          downloadNote: downloadInfo.note || ''
+        }
+      };
+    } else if (data && data.data && data.data.download) {
+      // Alternative response structure
+      return {
+        success: true,
+        platform: 'spotify',
+        data: {
+          title: data.data.title || data.data.track?.name || 'Spotify Track',
+          artist: data.data.artist || data.data.track?.artists || '',
+          downloadUrl: data.data.download || data.data.download?.url
+        }
+      };
+    } else {
+      throw new Error('Invalid Spotify API response structure');
+    }
+  } catch (error) {
+    console.error('Spotify API error:', error.message);
+    throw error;
+  }
+}
+
+// Generic handler for other platforms
+async function handleGenericResponse(apiUrl) {
+  const response = await axios.get(apiUrl, { timeout: 30000 });
+  return response.data;
+}
+
 app.post('/api/download-media', async (req, res) => {
   try {
     await updateCounter('mediadownloader');
     const { platform, url } = req.body;
+    
     if (!platform || !url) {
       return res.status(400).json({ success: false, error: 'Platform and URL are required' });
     }
+    
     const apiUrl = API_ENDPOINTS[platform](url);
-    const response = await axios.get(apiUrl, { timeout: 30000 });
-    res.json({ success: true, data: response.data, platform });
+    let result;
+    
+    // Handle Spotify specially due to its unique response structure
+    if (platform === 'spotify') {
+      result = await handleSpotifyResponse(apiUrl);
+    } else {
+      const responseData = await handleGenericResponse(apiUrl);
+      result = {
+        success: true,
+        platform: platform,
+        data: responseData
+      };
+    }
+    
+    res.json(result);
+    
   } catch (error) {
     console.error('Download error:', error.message);
-    res.status(500).json({ success: false, error: 'Failed to fetch media. Please check the URL.' });
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch media. Please check the URL and try again.' 
+    });
+  }
+});
+
+// ========== SPOTIFY DOWNLOAD PROXY (Fixes CORS and download issues) ==========
+app.get('/api/spotify-download', async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'Download URL is required' });
+    }
+    
+    console.log('Proxying Spotify download from:', url.substring(0, 100) + '...');
+    
+    // Fetch the audio file from the temporary Spotify download URL
+    const response = await axios({
+      method: 'GET',
+      url: url,
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'audio/mpeg,audio/*,*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://open.spotify.com/',
+        'Origin': 'https://open.spotify.com',
+        'Connection': 'keep-alive'
+      },
+      timeout: 60000,
+      maxRedirects: 5
+    });
+    
+    // Set appropriate headers for audio download
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Disposition', 'attachment; filename="spotify_track.mp3"');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    // Pipe the audio stream to the response
+    response.data.pipe(res);
+    
+  } catch (error) {
+    console.error('Spotify download proxy error:', error.message);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to download audio file. The link may have expired or the service is unavailable.' 
+    });
   }
 });
 
@@ -508,7 +630,6 @@ app.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, saving data and closing...');
-  // Clean up any pending uploads
   await cleanupOldFiles();
   process.exit(0);
 });
