@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Home Tools - Remove BG, FB Share, Downloader, Cover Maker</title>
+    <title>Home Tools</title>
     <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/4712/4712109.png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -52,6 +52,7 @@
         body.light-mode .platform-card { background: #f8fafc; border: 1px solid #e2e8f0; }
         body.light-mode .platform-card.active { background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-color: #667eea; }
         body.light-mode input, body.light-mode textarea, body.light-mode select { background: white; border: 2px solid #e2e8f0; color: #1f2937; }
+        body.light-mode .drop-zone { background: #f8fafc; border: 2px dashed #cbd5e1; }
         /* Dark Mode */
         body.dark-mode {
             background: linear-gradient(135deg, #0a0a12 0%, #0f0f1a 100%);
@@ -75,6 +76,7 @@
         body.dark-mode .platform-card { background: #1a1c2e; border: 1px solid #2d2d44; }
         body.dark-mode .platform-card.active { background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); border-color: #818cf8; }
         body.dark-mode input, body.dark-mode textarea, body.dark-mode select { background: #1a1a2e; color: white; border-color: #2d2d44; }
+        body.dark-mode .drop-zone { background: #1a1c2e; border: 2px dashed #334155; }
         /* Layout */
         .main-wrapper { display: flex; min-height: 100vh; position: relative; z-index: 1; }
         nav {
@@ -164,7 +166,7 @@
         /* Stats Dashboard */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -175,11 +177,12 @@
             transition: transform 0.3s ease;
         }
         .stat-card:hover { transform: translateY(-5px); }
-        .stat-card i { font-size: 2.5rem; margin-bottom: 10px; color: #667eea; }
-        .stat-card h3 { font-size: 1.8rem; font-weight: 800; margin: 10px 0; }
+        .stat-card i { font-size: 2rem; margin-bottom: 10px; }
+        .stat-card h3 { font-size: 1.6rem; font-weight: 800; margin: 10px 0; }
         .stat-card p { font-size: 0.85rem; opacity: 0.8; }
         .success-rate { color: #27ae60; }
         .fail-rate { color: #e74c3c; }
+        .neutral-rate { color: #667eea; }
         .chart-container { max-width: 400px; margin: 0 auto; }
         .platforms {
             display: grid;
@@ -229,6 +232,7 @@
             gap: 8px;
         }
         button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102,126,234,0.4); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
         .download-btn {
             padding: 10px 20px;
             background: linear-gradient(135deg, #27ae60 0%, #219a52 100%);
@@ -271,6 +275,53 @@
             background: linear-gradient(90deg, #667eea, #764ba2);
             transition: width 0.3s ease;
         }
+        /* Drop Zone Styles */
+        .drop-zone {
+            border: 2px dashed #667eea;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #764ba2;
+            background: rgba(102,126,234,0.1);
+            transform: scale(1.02);
+        }
+        .drop-zone i { font-size: 48px; margin-bottom: 15px; color: #667eea; }
+        .drop-zone p { margin: 10px 0; }
+        .drop-zone .small { font-size: 0.8rem; opacity: 0.7; }
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 16px;
+            margin-top: 15px;
+        }
+        /* Live Share Progress */
+        .live-progress {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 16px;
+            padding: 15px;
+            min-width: 300px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 1000;
+            display: none;
+        }
+        body.dark-mode .live-progress { background: #1a1c2e; }
+        .live-progress.show { display: block; animation: slideIn 0.3s ease; }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
         /* Modal */
         .modal {
             display: none;
@@ -308,11 +359,23 @@
             .sidebar.open { transform: translateX(0); }
             .main-content { margin-left: 0; max-width: 100%; padding: 20px; }
             .stats-grid { grid-template-columns: 1fr; }
+            .live-progress { left: 20px; right: 20px; min-width: auto; }
         }
     </style>
 </head>
 <body>
     <div id="particles-js"></div>
+
+    <!-- Live Share Progress Widget -->
+    <div id="liveProgress" class="live-progress">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+            <strong><i class="fas fa-share-alt"></i> Sharing Progress</strong>
+            <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar"><div id="liveProgressFill" class="progress-fill" style="width: 0%;"></div></div>
+        <p style="font-size: 0.8rem; margin-top: 10px;"><span id="progressSuccess">0</span> successful / <span id="progressFailed">0</span> failed</p>
+        <button id="cancelShareBtn" style="width: 100%; margin-top: 10px; background: #e74c3c; padding: 8px;"><i class="fas fa-times"></i> Cancel</button>
+    </div>
 
     <div id="popupModal" class="modal">
         <div class="modal-content">
@@ -419,6 +482,8 @@
         
         let currentTool = 'dashboard';
         let statsChart = null;
+        let currentShareId = null;
+        let progressInterval = null;
         
         document.querySelectorAll('.menu-item').forEach(item => {
             item.addEventListener('click', () => {
@@ -458,23 +523,28 @@
                 const statsData = await statsRes.json();
                 const stats = statsData.stats || { visits: 0, toolUsage: {}, shareStats: { totalShares: 0, totalSuccess: 0, totalFailed: 0, successRate: 0 } };
                 const shareStats = stats.shareStats || {};
-                const successRate = shareStats.successRate || 0;
-                const failRate = 100 - successRate;
+                
+                // Calculate success rates for each tool (simulated based on usage)
+                const totalUsage = (stats.toolUsage?.removebg || 0) + (stats.toolUsage?.fbshare || 0) + (stats.toolUsage?.mediadownloader || 0) + (stats.toolUsage?.fbcover || 0);
+                const removeBgRate = totalUsage > 0 ? Math.round(((stats.toolUsage?.removebg || 0) / totalUsage) * 100) : 0;
+                const fbShareRate = totalUsage > 0 ? Math.round(((stats.toolUsage?.fbshare || 0) / totalUsage) * 100) : 0;
+                const mediaRate = totalUsage > 0 ? Math.round(((stats.toolUsage?.mediadownloader || 0) / totalUsage) * 100) : 0;
+                const coverRate = totalUsage > 0 ? Math.round(((stats.toolUsage?.fbcover || 0) / totalUsage) * 100) : 0;
                 
                 document.getElementById('mainContent').innerHTML = `
                     <div class="card">
                         <h2><i class="fas fa-chart-line"></i> Performance Dashboard</h2>
-                        <p>Real-time analytics and tool usage statistics</p>
+                        <p>Real-time analytics across all tools</p>
                     </div>
                     <div class="stats-grid">
-                        <div class="stat-card"><i class="fas fa-eye"></i><h3>${stats.visits || 0}</h3><p>Total Visits</p></div>
-                        <div class="stat-card"><i class="fas fa-magic"></i><h3>${stats.toolUsage?.removebg || 0}</h3><p>Background Removals</p></div>
-                        <div class="stat-card"><i class="fas fa-share-alt"></i><h3>${stats.toolUsage?.fbshare || 0}</h3><p>Share Campaigns</p></div>
-                        <div class="stat-card"><i class="fas fa-download"></i><h3>${stats.toolUsage?.mediadownloader || 0}</h3><p>Media Downloads</p></div>
-                        <div class="stat-card"><i class="fas fa-image"></i><h3>${stats.toolUsage?.fbcover || 0}</h3><p>Covers Generated</p></div>
+                        <div class="stat-card"><i class="fas fa-eye neutral-rate"></i><h3>${stats.visits || 0}</h3><p>Total Visits</p></div>
+                        <div class="stat-card"><i class="fas fa-magic success-rate"></i><h3>${stats.toolUsage?.removebg || 0}</h3><p>Background Removals</p><div class="progress-bar"><div class="progress-fill" style="width: ${removeBgRate}%; background:#27ae60;"></div></div><small>${removeBgRate}% of usage</small></div>
+                        <div class="stat-card"><i class="fas fa-share-alt success-rate"></i><h3>${stats.toolUsage?.fbshare || 0}</h3><p>Share Campaigns</p><div class="progress-bar"><div class="progress-fill" style="width: ${fbShareRate}%; background:#27ae60;"></div></div><small>${fbShareRate}% of usage</small></div>
+                        <div class="stat-card"><i class="fas fa-download success-rate"></i><h3>${stats.toolUsage?.mediadownloader || 0}</h3><p>Media Downloads</p><div class="progress-bar"><div class="progress-fill" style="width: ${mediaRate}%; background:#27ae60;"></div></div><small>${mediaRate}% of usage</small></div>
+                        <div class="stat-card"><i class="fas fa-image success-rate"></i><h3>${stats.toolUsage?.fbcover || 0}</h3><p>Covers Generated</p><div class="progress-bar"><div class="progress-fill" style="width: ${coverRate}%; background:#27ae60;"></div></div><small>${coverRate}% of usage</small></div>
                     </div>
                     <div class="card">
-                        <h3><i class="fas fa-chart-pie"></i> Share Success Rate</h3>
+                        <h3><i class="fas fa-chart-pie"></i> Facebook Share Performance</h3>
                         <div class="stats-grid">
                             <div class="stat-card success-rate"><i class="fas fa-check-circle"></i><h3>${shareStats.totalSuccess || 0}</h3><p>Successful Shares</p></div>
                             <div class="stat-card fail-rate"><i class="fas fa-times-circle"></i><h3>${shareStats.totalFailed || 0}</h3><p>Failed Shares</p></div>
@@ -482,8 +552,8 @@
                         <div class="chart-container">
                             <canvas id="successRateChart"></canvas>
                         </div>
-                        <div class="progress-bar" style="margin-top:20px;"><div class="progress-fill" style="width: ${successRate}%;"></div></div>
-                        <p style="text-align:center; margin-top:10px;"><strong>Success Rate: ${successRate}%</strong> | Fail Rate: ${failRate}%</p>
+                        <div class="progress-bar" style="margin-top:20px;"><div class="progress-fill" style="width: ${shareStats.successRate || 0}%;"></div></div>
+                        <p style="text-align:center; margin-top:10px;"><strong>Share Success Rate: ${shareStats.successRate || 0}%</strong></p>
                     </div>
                     <div class="card">
                         <h3><i class="fas fa-rocket"></i> Quick Access Tools</h3>
@@ -500,25 +570,55 @@
                 const ctx = document.getElementById('successRateChart').getContext('2d');
                 statsChart = new Chart(ctx, {
                     type: 'doughnut',
-                    data: { labels: ['Success', 'Failed'], datasets: [{ data: [successRate, failRate], backgroundColor: ['#27ae60', '#e74c3c'], borderWidth: 0 }] },
+                    data: { labels: ['Success', 'Failed'], datasets: [{ data: [shareStats.successRate || 0, 100 - (shareStats.successRate || 0)], backgroundColor: ['#27ae60', '#e74c3c'], borderWidth: 0 }] },
                     options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
                 });
             } catch(e) { console.error(e); }
         }
 
+        // Updated Remove BG with Drag & Drop
         function getRemoveBGHTML() {
-            return `<div class="card"><h2><i class="fas fa-magic"></i> Remove Background</h2><p>Upload an image and remove its background instantly with AI</p></div>
-            <div class="input-section"><div class="input-group"><input type="file" id="imageInput" accept="image/*"><button id="removeBgBtn"><i class="fas fa-eraser"></i> Remove Background</button></div></div>
+            return `<div class="card"><h2><i class="fas fa-magic"></i> Remove Background</h2><p>Upload or drag & drop an image to remove its background instantly with AI</p></div>
+            <div class="input-section">
+                <div id="dropZone" class="drop-zone">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p><strong>Drag & Drop your image here</strong></p>
+                    <p class="small">or click to browse</p>
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                </div>
+            </div>
             <div class="result-section" id="removeBgResult"><div class="result-header"><i class="fas fa-info-circle"></i><h3>Result</h3></div><div style="text-align:center;padding:30px;">Upload an image to see the magic happen ✨</div></div>`;
         }
 
         function attachRemoveBGEvents() {
-            document.getElementById('removeBgBtn').onclick = async () => {
-                const file = document.getElementById('imageInput').files[0];
-                if (!file) { alert('Please select an image'); return; }
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('imageInput');
+            
+            dropZone.onclick = () => fileInput.click();
+            dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); };
+            dropZone.ondragleave = () => dropZone.classList.remove('drag-over');
+            dropZone.ondrop = (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    fileInput.files = e.dataTransfer.files;
+                    processImage(file);
+                } else { alert('Please drop an image file'); }
+            };
+            fileInput.onchange = (e) => { if (e.target.files[0]) processImage(e.target.files[0]); };
+            
+            async function processImage(file) {
                 const formData = new FormData();
                 formData.append('image', file);
-                document.getElementById('removeBgResult').innerHTML = `<div class="loading"><i class="fas fa-spinner fa-pulse"></i><p>Removing background...</p></div>`;
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('removeBgResult').innerHTML = `<div class="result-header"><i class="fas fa-spinner fa-pulse"></i><h3>Processing...</h3></div><div style="text-align:center;"><img src="${e.target.result}" style="max-width:100%; border-radius:16px; margin-bottom:15px;"><div class="loading"><i class="fas fa-spinner fa-pulse"></i><p>Removing background...</p></div></div>`;
+                };
+                reader.readAsDataURL(file);
+                
                 try {
                     const res = await fetch('/api/removebg', { method: 'POST', body: formData });
                     const data = await res.json();
@@ -526,39 +626,107 @@
                         document.getElementById('removeBgResult').innerHTML = `<div class="result-header"><i class="fas fa-check-circle"></i><h3>Success!</h3></div><div class="media-card"><div class="media-info"><div class="media-title">Background Removed Image</div></div><a href="${data.url}" class="download-btn" download target="_blank"><i class="fas fa-download"></i> Download</a></div><img src="${data.url}" style="max-width:100%; border-radius:16px; margin-top:15px;">`;
                     } else { throw new Error(data.error); }
                 } catch(e) { document.getElementById('removeBgResult').innerHTML = `<div class="error"><i class="fas fa-exclamation-circle"></i><p>${e.message}</p></div>`; }
-            };
+            }
         }
 
+        // Updated FB Share with Live Progress
         function getFBShareHTML() {
-            return `<div class="card"><h2><i class="fas fa-share-alt"></i> Facebook Share Tool</h2><p>Auto-share posts to Facebook (up to 5000 shares). Includes backup API fallback.</p></div>
+            return `<div class="card"><h2><i class="fas fa-share-alt"></i> Facebook Share Tool</h2><p>Auto-share posts to Facebook (up to 5000 shares). Live progress tracking included.</p></div>
             <div class="input-section"><div class="input-group" style="flex-direction:column; gap:12px;"><textarea id="fbCookie" rows="3" placeholder="Facebook cookie (entire cookie string)..." style="resize:vertical;"></textarea><input type="text" id="fbLink" placeholder="Post URL to share..."><input type="number" id="fbLimit" placeholder="Number of shares (max 5000)" max="5000"><button id="fbShareBtn"><i class="fas fa-share"></i> Start Sharing</button></div></div>
             <div class="result-section" id="fbShareResult"><div class="result-header"><i class="fas fa-history"></i><h3>Share History</h3></div><div id="shareHistoryList" style="max-height:400px; overflow-y:auto;">Loading...</div></div>`;
         }
 
         async function attachFBShareEvents() {
             await loadShareHistory();
+            
             document.getElementById('fbShareBtn').onclick = async () => {
                 const cookie = document.getElementById('fbCookie').value.trim();
                 const link = document.getElementById('fbLink').value.trim();
                 const limit = parseInt(document.getElementById('fbLimit').value);
                 if (!cookie || !link || !limit || limit > 5000) { alert('Valid cookie, link, and limit (max 5000) required'); return; }
+                
                 const btn = document.getElementById('fbShareBtn');
-                btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Sharing...';
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Starting...';
+                
+                // Show live progress widget
+                const liveProgress = document.getElementById('liveProgress');
+                liveProgress.classList.add('show');
+                document.getElementById('progressPercent').innerText = '0%';
+                document.getElementById('liveProgressFill').style.width = '0%';
+                document.getElementById('progressSuccess').innerText = '0';
+                document.getElementById('progressFailed').innerText = '0';
+                
                 try {
-                    const res = await fetch('/api/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cookie, link, limit }) });
+                    const res = await fetch('/api/share', { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json' }, 
+                        body: JSON.stringify({ cookie, link, limit }) 
+                    });
                     const data = await res.json();
-                    if (data.status) { alert(`✅ ${data.message}\nSuccess: ${data.success_count}\nFailed: ${data.failed_count}`); await loadShareHistory(); }
-                    else { alert('Error: ' + data.message); }
-                } catch(e) { alert('Network error: ' + e.message); }
-                finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-share"></i> Start Sharing'; }
+                    
+                    if (data.status && data.share_id) {
+                        currentShareId = data.share_id;
+                        startProgressTracking(currentShareId, limit);
+                    } else {
+                        throw new Error(data.message);
+                    }
+                } catch(e) { 
+                    alert('Error: ' + e.message);
+                    liveProgress.classList.remove('show');
+                } finally { 
+                    btn.disabled = false; 
+                    btn.innerHTML = '<i class="fas fa-share"></i> Start Sharing';
+                }
             };
+            
+            document.getElementById('cancelShareBtn').onclick = async () => {
+                if (currentShareId) {
+                    try {
+                        await fetch(`/api/share/${currentShareId}/cancel`, { method: 'POST' });
+                        if (progressInterval) clearInterval(progressInterval);
+                        document.getElementById('liveProgress').classList.remove('show');
+                        alert('Share cancelled');
+                    } catch(e) { console.error(e); }
+                }
+            };
+        }
+        
+        function startProgressTracking(shareId, totalLimit) {
+            if (progressInterval) clearInterval(progressInterval);
+            
+            progressInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/share/${shareId}/progress`);
+                    const data = await res.json();
+                    if (data.status && data.share) {
+                        const progress = data.share.progress || 0;
+                        const success = data.share.success || 0;
+                        const failed = data.share.failed || 0;
+                        
+                        document.getElementById('progressPercent').innerText = `${progress}%`;
+                        document.getElementById('liveProgressFill').style.width = `${progress}%`;
+                        document.getElementById('progressSuccess').innerText = success;
+                        document.getElementById('progressFailed').innerText = failed;
+                        
+                        if (data.share.status === 'completed' || data.share.status === 'failed' || data.share.status === 'cancelled') {
+                            clearInterval(progressInterval);
+                            setTimeout(() => {
+                                document.getElementById('liveProgress').classList.remove('show');
+                                loadShareHistory();
+                                loadDashboard();
+                            }, 3000);
+                        }
+                    }
+                } catch(e) { console.error(e); }
+            }, 2000);
         }
 
         async function loadShareHistory() {
             try {
                 const res = await fetch('/api/share/history');
                 const data = await res.json();
-                const historyHtml = data.history && data.history.length ? data.history.map(h => `<div class="media-card"><div><strong>${new Date(h.startTime).toLocaleString()}</strong><br><small style="opacity:0.7;">${h.link.substring(0,60)}...</small></div><div><span style="color:#27ae60;">✅ ${h.success || 0}</span> / <span style="color:#e74c3c;">❌ ${h.failed || 0}</span><br><small>${h.status}</small></div></div>`).join('') : '<div style="text-align:center;padding:20px;">No share history yet. Start your first campaign!</div>';
+                const historyHtml = data.history && data.history.length ? data.history.map(h => `<div class="media-card"><div><strong>${new Date(h.startTime).toLocaleString()}</strong><br><small style="opacity:0.7;">${h.link?.substring(0,60) || 'N/A'}...</small></div><div><span style="color:#27ae60;">✅ ${h.success || 0}</span> / <span style="color:#e74c3c;">❌ ${h.failed || 0}</span><br><small>${h.status}</small></div></div>`).join('') : '<div style="text-align:center;padding:20px;">No share history yet. Start your first campaign!</div>';
                 document.getElementById('shareHistoryList').innerHTML = historyHtml;
             } catch(e) { console.error(e); }
         }
